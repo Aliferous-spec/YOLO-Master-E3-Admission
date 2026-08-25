@@ -1,0 +1,235 @@
+{
+  "status": "PASS",
+  "scope": "E3 8.25 admission Smoke; MoT/MoE/Latent families; not P0",
+  "run_id": "admission-20260825",
+  "schema_version": "e3-routing-smoke/v0.1-candidate",
+  "official_base_ref": "3eb6cd914b651a06e2cd08ea87d12c28cab95502",
+  "baseline_root": "D:\\YOLO-Master",
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "python_executable": "C:\\Users\\刘小姐\\.venvs\\yolo_master\\Scripts\\python.exe",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101",
+    "cwd": "D:\\YOLO-Master",
+    "captured_at": "2026-08-25T20:17:24+08:00"
+  },
+  "mot": {
+    "returncode": 0,
+    "copied_files": [
+      "mot_deformable_activation_check.csv",
+      "mot_routing_detailed.csv",
+      "mot_routing_scenarios.csv",
+      "mot_expert_heatmap_top1_share.png"
+    ]
+  },
+  "moe": {
+    "usage_stats": {
+      "model.5.routing": {
+        "0": {
+          "hits": 5.0,
+          "weighted_sum": 2.4770734012126923,
+          "avg_weight": 0.49541468024253843
+        },
+        "1": {
+          "hits": 1.0,
+          "weighted_sum": 0.4999989867210388,
+          "avg_weight": 0.4999989867210388
+        },
+        "3": {
+          "hits": 4.0,
+          "weighted_sum": 2.0229178071022034,
+          "avg_weight": 0.5057294517755508
+        }
+      },
+      "model.8.routing": {
+        "0": {
+          "hits": 1.0,
+          "weighted_sum": 0.49999797344207764,
+          "avg_weight": 0.49999797344207764
+        },
+        "1": {
+          "hits": 1.0,
+          "weighted_sum": 0.49999797344207764,
+          "avg_weight": 0.49999797344207764
+        },
+        "3": {
+          "hits": 4.0,
+          "weighted_sum": 1.9641771018505096,
+          "avg_weight": 0.4910442754626274
+        },
+        "6": {
+          "hits": 4.0,
+          "weighted_sum": 2.0358081459999084,
+          "avg_weight": 0.5089520364999771
+        }
+      },
+      "model.11.routing": {
+        "0": {
+          "hits": 1.0,
+          "weighted_sum": 0.49999600648880005,
+          "avg_weight": 0.49999600648880005
+        },
+        "1": {
+          "hits": 1.0,
+          "weighted_sum": 0.49999600648880005,
+          "avg_weight": 0.49999600648880005
+        },
+        "3": {
+          "hits": 4.0,
+          "weighted_sum": 2.1056853532791138,
+          "avg_weight": 0.5264213383197784
+        },
+        "11": {
+          "hits": 4.0,
+          "weighted_sum": 1.8942876160144806,
+          "avg_weight": 0.47357190400362015
+        }
+      }
+    },
+    "hooked_modules": null
+  },
+  "latent": {
+    "records": [
+      {
+        "module_name": "model.23",
+        "module_type": "LatentMixture",
+        "num_keys": 36,
+        "keys": [
+          "active_experts_per_sample",
+          "aux_loss",
+          "balance_loss",
+          "batch_expert_union",
+          "configured_top_k",
+          "ddp_balance_synced",
+          "dispatch_policy",
+          "entropy",
+          "executed_experts",
+          "expert_usage",
+          "family",
+          "finite",
+          "identity_cold_start",
+          "inference_calibrated",
+          "inference_calibration_batches",
+          "inference_calibration_error",
+          "inference_calibration_tolerance",
+          "inference_top_k",
+          "kernel_calls",
+          "mean_active_experts_per_sample",
+          "mean_router_logits",
+          "mean_router_probs",
+          "noise_std",
+          "num_experts",
+          "residual_gain",
+          "residual_gain_magnitude",
+          "router_aux_gradient_enabled",
+          "router_init_std",
+          "router_output_head_magnitude",
+          "routing_axis",
+          "temperature",
+          "top_k",
+          "training_top_k",
+          "value_fusion_mode",
+          "value_fusion_weights",
+          "z_loss"
+        ]
+      },
+      {
+        "module_name": "model.24",
+        "module_type": "LatentMixture",
+        "num_keys": 36,
+        "keys": [
+          "active_experts_per_sample",
+          "aux_loss",
+          "balance_loss",
+          "batch_expert_union",
+          "configured_top_k",
+          "ddp_balance_synced",
+          "dispatch_policy",
+          "entropy",
+          "executed_experts",
+          "expert_usage",
+          "family",
+          "finite",
+          "identity_cold_start",
+          "inference_calibrated",
+          "inference_calibration_batches",
+          "inference_calibration_error",
+          "inference_calibration_tolerance",
+          "inference_top_k",
+          "kernel_calls",
+          "mean_active_experts_per_sample",
+          "mean_router_logits",
+          "mean_router_probs",
+          "noise_std",
+          "num_experts",
+          "residual_gain",
+          "residual_gain_magnitude",
+          "router_aux_gradient_enabled",
+          "router_init_std",
+          "router_output_head_magnitude",
+          "routing_axis",
+          "temperature",
+          "top_k",
+          "training_top_k",
+          "value_fusion_mode",
+          "value_fusion_weights",
+          "z_loss"
+        ]
+      },
+      {
+        "module_name": "model.25",
+        "module_type": "LatentMixture",
+        "num_keys": 36,
+        "keys": [
+          "active_experts_per_sample",
+          "aux_loss",
+          "balance_loss",
+          "batch_expert_union",
+          "configured_top_k",
+          "ddp_balance_synced",
+          "dispatch_policy",
+          "entropy",
+          "executed_experts",
+          "expert_usage",
+          "family",
+          "finite",
+          "identity_cold_start",
+          "inference_calibrated",
+          "inference_calibration_batches",
+          "inference_calibration_error",
+          "inference_calibration_tolerance",
+          "inference_top_k",
+          "kernel_calls",
+          "mean_active_experts_per_sample",
+          "mean_router_logits",
+          "mean_router_probs",
+          "noise_std",
+          "num_experts",
+          "residual_gain",
+          "residual_gain_magnitude",
+          "router_aux_gradient_enabled",
+          "router_init_std",
+          "router_output_head_magnitude",
+          "routing_axis",
+          "temperature",
+          "top_k",
+          "training_top_k",
+          "value_fusion_mode",
+          "value_fusion_weights",
+          "z_loss"
+        ]
+      }
+    ],
+    "module_count": 3
+  },
+  "overhead": {
+    "returncode": 0,
+    "output": "WARNING no model scale passed. Assuming scale='n'.\nModule Name                                        | Type                           | Status\n------------------------------------------------------------------------------------------\nmodel.5.routing                                    | DualStreamGateRouter           |  Hooked\nmodel.8.routing                                    | DualStreamGateRouter           |  Hooked\nmodel.11.routing                                   | DualStreamGateRouter           |  Hooked\n\n Successfully hooked 3 router module(s)\n------------------------------------------------------------------------------------------\nwithout hook: 7.595s (151.9 ms/forward)\nwith hook:    7.215s (144.3 ms/forward)\noverhead:     -5.01% (target < 10%)\n",
+    "overhead_percent": null
+  },
+  "validation": {
+    "errors": [],
+    "mot": "see CSV artifacts"
+  }
+}

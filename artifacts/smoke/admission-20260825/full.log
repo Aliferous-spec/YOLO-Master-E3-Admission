@@ -1,0 +1,363 @@
+2026-08-25 20:11:10,164 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
+2026-08-25 20:11:11,374 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-08-25 20:11:22,285 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-08-25 20:11:22,400 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-08-25 20:11:25,527 [ERROR] Smoke step failed: Object of type ExpertStats is not JSON serializable
+2026-08-25 20:11:25,536 [INFO] result=FAIL
+2026-08-25 20:12:13,888 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
+2026-08-25 20:12:15,013 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-08-25 20:12:21,522 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-08-25 20:12:21,638 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-08-25 20:12:24,713 [ERROR] Smoke step failed: 'ExpertStats' object has no attribute 'mean'
+2026-08-25 20:12:24,720 [INFO] result=FAIL
+2026-08-25 20:12:49,129 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
+2026-08-25 20:12:50,284 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-08-25 20:12:56,915 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-08-25 20:12:57,023 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-08-25 20:13:00,125 [INFO] MoE usage_stats: {
+  "model.5.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.4999989867210388,
+      "avg_weight": 0.4999989867210388
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.4999989867210388,
+      "avg_weight": 0.4999989867210388
+    },
+    "2": {
+      "hits": 4.0,
+      "weighted_sum": 1.9735102951526642,
+      "avg_weight": 0.49337757378816605
+    },
+    "3": {
+      "hits": 4.0,
+      "weighted_sum": 2.026481866836548,
+      "avg_weight": 0.506620466709137
+    }
+  },
+  "model.8.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "2": {
+      "hits": 4.0,
+      "weighted_sum": 2.0915958285331726,
+      "avg_weight": 0.5228989571332932
+    },
+    "5": {
+      "hits": 4.0,
+      "weighted_sum": 1.908389687538147,
+      "avg_weight": 0.47709742188453674
+    }
+  },
+  "model.11.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "1": {
+      "hits": 2.0,
+      "weighted_sum": 0.9920949935913086,
+      "avg_weight": 0.4960474967956543
+    },
+    "5": {
+      "hits": 4.0,
+      "weighted_sum": 2.0636211037635803,
+      "avg_weight": 0.5159052759408951
+    },
+    "9": {
+      "hits": 1.0,
+      "weighted_sum": 0.4814760088920593,
+      "avg_weight": 0.4814760088920593
+    },
+    "12": {
+      "hits": 2.0,
+      "weighted_sum": 0.9627759456634521,
+      "avg_weight": 0.4813879728317261
+    }
+  }
+}
+2026-08-25 20:13:00,127 [ERROR] Smoke step failed: name 'run_latent' is not defined
+2026-08-25 20:13:00,135 [INFO] result=FAIL
+2026-08-25 20:13:34,889 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
+2026-08-25 20:13:36,054 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-08-25 20:13:42,797 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-08-25 20:13:42,907 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-08-25 20:13:45,997 [INFO] MoE usage_stats: {
+  "model.5.routing": {
+    "0": {
+      "hits": 5.0,
+      "weighted_sum": 2.5790045857429504,
+      "avg_weight": 0.5158009171485901
+    },
+    "1": {
+      "hits": 4.0,
+      "weighted_sum": 1.9380046129226685,
+      "avg_weight": 0.4845011532306671
+    },
+    "3": {
+      "hits": 1.0,
+      "weighted_sum": 0.48298096656799316,
+      "avg_weight": 0.48298096656799316
+    }
+  },
+  "model.8.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "1": {
+      "hits": 5.0,
+      "weighted_sum": 2.4068939089775085,
+      "avg_weight": 0.4813787817955017
+    },
+    "7": {
+      "hits": 4.0,
+      "weighted_sum": 2.0930888652801514,
+      "avg_weight": 0.5232722163200378
+    }
+  },
+  "model.11.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "7": {
+      "hits": 4.0,
+      "weighted_sum": 1.964991807937622,
+      "avg_weight": 0.4912479519844055
+    },
+    "8": {
+      "hits": 4.0,
+      "weighted_sum": 2.034982442855835,
+      "avg_weight": 0.5087456107139587
+    }
+  }
+}
+2026-08-25 20:13:46,000 [INFO] Latent: model=ultralytics/cfg/models/26/yolo26-master-latent-n.yaml size=640
+2026-08-25 20:13:46,392 [INFO] Latent records: 3
+2026-08-25 20:13:46,394 [INFO] Overhead: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
+2026-08-25 20:14:03,389 [INFO] WARNING no model scale passed. Assuming scale='n'.
+Module Name                                        | Type                           | Status
+------------------------------------------------------------------------------------------
+model.5.routing                                    | DualStreamGateRouter           |  Hooked
+model.8.routing                                    | DualStreamGateRouter           |  Hooked
+model.11.routing                                   | DualStreamGateRouter           |  Hooked
+
+ Successfully hooked 3 router module(s)
+------------------------------------------------------------------------------------------
+without hook: 7.240s (144.8 ms/forward)
+with hook:    7.203s (144.1 ms/forward)
+overhead:     -0.51% (target < 10%)
+
+2026-08-25 20:14:03,397 [INFO] result=PASS
+2026-08-25 20:16:19,052 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
+2026-08-25 20:16:20,215 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-08-25 20:16:26,775 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-08-25 20:16:26,893 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-08-25 20:16:29,986 [INFO] MoE usage_stats: {
+  "model.5.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.4999989867210388,
+      "avg_weight": 0.4999989867210388
+    },
+    "1": {
+      "hits": 5.0,
+      "weighted_sum": 2.507441520690918,
+      "avg_weight": 0.5014883041381836
+    },
+    "2": {
+      "hits": 4.0,
+      "weighted_sum": 1.9925498366355896,
+      "avg_weight": 0.4981374591588974
+    }
+  },
+  "model.8.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "1": {
+      "hits": 5.0,
+      "weighted_sum": 2.4169136583805084,
+      "avg_weight": 0.4833827316761017
+    },
+    "5": {
+      "hits": 4.0,
+      "weighted_sum": 2.083069086074829,
+      "avg_weight": 0.5207672715187073
+    }
+  },
+  "model.11.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "11": {
+      "hits": 4.0,
+      "weighted_sum": 2.0133637189865112,
+      "avg_weight": 0.5033409297466278
+    },
+    "13": {
+      "hits": 4.0,
+      "weighted_sum": 1.9866082966327667,
+      "avg_weight": 0.4966520741581917
+    }
+  }
+}
+2026-08-25 20:16:29,988 [INFO] Latent: model=ultralytics/cfg/models/26/yolo26-master-latent-n.yaml size=640
+2026-08-25 20:16:30,370 [INFO] Latent records: 3
+2026-08-25 20:16:30,372 [INFO] Overhead: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
+2026-08-25 20:16:47,133 [INFO] WARNING no model scale passed. Assuming scale='n'.
+Module Name                                        | Type                           | Status
+------------------------------------------------------------------------------------------
+model.5.routing                                    | DualStreamGateRouter           |  Hooked
+model.8.routing                                    | DualStreamGateRouter           |  Hooked
+model.11.routing                                   | DualStreamGateRouter           |  Hooked
+
+ Successfully hooked 3 router module(s)
+------------------------------------------------------------------------------------------
+without hook: 7.030s (140.6 ms/forward)
+with hook:    7.209s (144.2 ms/forward)
+overhead:     2.55% (target < 10%)
+
+2026-08-25 20:16:47,141 [INFO] result=PASS
+2026-08-25 20:17:23,168 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
+2026-08-25 20:17:24,320 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-08-25 20:17:30,734 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-08-25 20:17:30,847 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-08-25 20:17:33,961 [INFO] MoE usage_stats: {
+  "model.5.routing": {
+    "0": {
+      "hits": 5.0,
+      "weighted_sum": 2.4770734012126923,
+      "avg_weight": 0.49541468024253843
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.4999989867210388,
+      "avg_weight": 0.4999989867210388
+    },
+    "3": {
+      "hits": 4.0,
+      "weighted_sum": 2.0229178071022034,
+      "avg_weight": 0.5057294517755508
+    }
+  },
+  "model.8.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "3": {
+      "hits": 4.0,
+      "weighted_sum": 1.9641771018505096,
+      "avg_weight": 0.4910442754626274
+    },
+    "6": {
+      "hits": 4.0,
+      "weighted_sum": 2.0358081459999084,
+      "avg_weight": 0.5089520364999771
+    }
+  },
+  "model.11.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "3": {
+      "hits": 4.0,
+      "weighted_sum": 2.1056853532791138,
+      "avg_weight": 0.5264213383197784
+    },
+    "11": {
+      "hits": 4.0,
+      "weighted_sum": 1.8942876160144806,
+      "avg_weight": 0.47357190400362015
+    }
+  }
+}
+2026-08-25 20:17:33,961 [INFO] Latent: model=ultralytics/cfg/models/26/yolo26-master-latent-n.yaml size=640
+2026-08-25 20:17:34,368 [INFO] Latent records: 3
+2026-08-25 20:17:34,369 [INFO] Overhead: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
+2026-08-25 20:17:51,792 [INFO] WARNING no model scale passed. Assuming scale='n'.
+Module Name                                        | Type                           | Status
+------------------------------------------------------------------------------------------
+model.5.routing                                    | DualStreamGateRouter           |  Hooked
+model.8.routing                                    | DualStreamGateRouter           |  Hooked
+model.11.routing                                   | DualStreamGateRouter           |  Hooked
+
+ Successfully hooked 3 router module(s)
+------------------------------------------------------------------------------------------
+without hook: 7.595s (151.9 ms/forward)
+with hook:    7.215s (144.3 ms/forward)
+overhead:     -5.01% (target < 10%)
+
+2026-08-25 20:17:51,801 [INFO] result=PASS

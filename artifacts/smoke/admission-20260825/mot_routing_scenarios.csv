@@ -1,0 +1,13 @@
+expert,expert_id,layers,mean_weight,scene,top1_share_mean
+LocalConvTransformer,0,6,0.666667,dense_small,1.000000
+WindowTransformer,1,6,0.333333,dense_small,0.000000
+DeformableTransformer,2,6,0.000000,dense_small,0.000000
+LocalConvTransformer,0,6,0.666667,irregular_occluded,1.000000
+WindowTransformer,1,6,0.333333,irregular_occluded,0.000000
+DeformableTransformer,2,6,0.000000,irregular_occluded,0.000000
+LocalConvTransformer,0,6,0.666667,large_regular,1.000000
+WindowTransformer,1,6,0.333333,large_regular,0.000000
+DeformableTransformer,2,6,0.000000,large_regular,0.000000
+LocalConvTransformer,0,6,0.666667,sparse_small,1.000000
+WindowTransformer,1,6,0.333333,sparse_small,0.000000
+DeformableTransformer,2,6,0.000000,sparse_small,0.000000
