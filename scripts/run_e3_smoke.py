@@ -12,6 +12,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import logging
@@ -182,16 +183,21 @@ def collect_environment() -> dict[str, Any]:
     return {
         "platform": platform.platform(),
         "python": sys.version.split()[0],
-        "python_executable": sys.executable,
+        "python_executable": "<baseline-python>",
         "torch": torch.__version__,
         "ultralytics": ultralytics.__version__,
-        "cwd": os.getcwd(),
+        "cwd": "<baseline-root>",
         "captured_at": datetime.now().astimezone().isoformat(timespec="seconds"),
     }
 
 
 def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
     mot = config["mot"]
+    output_dir = Path(mot["output_dir"])
+    if output_dir.is_dir():
+        for pattern in ("*.csv", "*.png", "*.txt"):
+            for file in sorted(output_dir.glob(pattern)):
+                file.unlink()
     command = [sys.executable, str(Path(mot["script"])), *[str(a) for a in mot.get("args", [])]]
     logger.info("MoT: %s", " ".join(command))
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
@@ -200,7 +206,6 @@ def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> 
         logger.info("MoT stderr: %s", result.stderr)
     if result.returncode != 0:
         raise RuntimeError(f"MoT smoke failed with rc={result.returncode}")
-    output_dir = Path(mot["output_dir"])
     copied: list[str] = []
     if output_dir.is_dir():
         for pattern in ("*.csv", "*.png", "*.txt"):
@@ -231,6 +236,8 @@ def run_moe(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> 
             for layer, experts in tracker.usage_stats.items()
         }
     hooked = getattr(tracker, "hooked_modules", None)
+    if not stats:
+        raise RuntimeError("MoE usage stats empty: no experts tracked")
     (artifacts / "moe_usage_stats.json").write_text(
         json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -260,6 +267,8 @@ def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger) 
                     "keys": keys,
                 }
             )
+    if not records:
+        raise RuntimeError("no latent routing snapshots captured")
     with (artifacts / "latent_snapshot.jsonl").open("w", encoding="utf-8") as stream:
         for record in records:
             stream.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -284,10 +293,13 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
     if result.returncode != 0:
         raise RuntimeError(f"overhead measurement failed with rc={result.returncode}")
     match = re.search(r"overhead:\s+([\d.]+)%", text)
+    if match is None:
+        raise RuntimeError("overhead_percent not found in overhead script output")
+    overhead_percent = float(match.group(1))
     overhead_result = {
         "returncode": result.returncode,
         "output": text,
-        "overhead_percent": float(match.group(1)) if match else None,
+        "overhead_percent": overhead_percent,
     }
     (artifacts / "overhead_result.json").write_text(
         json.dumps(overhead_result, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -295,12 +307,91 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
     return {
         "returncode": result.returncode,
         "output": text,
-        "overhead_percent": float(match.group(1)) if match else None,
+        "overhead_percent": overhead_percent,
     }
 
 
 def build_manifest(artifacts: Path) -> dict[str, str]:
-    return {file.name: sha256_file(file) for file in sorted(artifacts.iterdir()) if file.is_file()}
+    return {
+        file.name: sha256_file(file)
+        for file in sorted(artifacts.iterdir())
+        if file.is_file() and file.name != "manifest.sha256.json"
+    }
+
+
+def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
+    """Read ``mot_routing_detailed.csv`` into per-decision validation records."""
+    if not csv_path.is_file():
+        raise RuntimeError(f"MoT detailed CSV missing: {csv_path}")
+    with csv_path.open("r", encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    if not rows:
+        raise RuntimeError(f"MoT detailed CSV is empty: {csv_path}")
+    decisions: dict[tuple[str, str, str], list[float]] = {}
+    try:
+        for row in rows:
+            key = (row["scene"], row["image_id"], row["layer"])
+            decisions.setdefault(key, []).append(float(row["top1_share"]))
+    except (KeyError, ValueError) as exc:
+        raise RuntimeError(f"cannot parse MoT detailed CSV {csv_path}: {exc}") from exc
+    records: list[dict[str, Any]] = []
+    for key, loads in sorted(decisions.items()):
+        scene, image_id, layer = key
+        records.append({"scene": scene, "image_id": image_id, "layer": layer, **routing_metrics(loads)})
+    return records
+
+
+def verify_artifacts(artifacts: Path) -> list[str]:
+    """Return post-condition errors for the MoE/Latent/overhead evidence files."""
+    errors: list[str] = []
+
+    moe_json = artifacts / "moe_usage_stats.json"
+    try:
+        moe_stats = json.loads(moe_json.read_text(encoding="utf-8")) if moe_json.is_file() else None
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        moe_stats = None
+        errors.append(f"MoE usage stats unreadable: {exc}")
+    if moe_stats is None:
+        errors.append("MoE usage stats missing or empty")
+    elif not isinstance(moe_stats, dict):
+        raise RuntimeError(f"MoE usage stats must be a JSON object, got {type(moe_stats).__name__}")
+    elif not moe_stats:
+        errors.append("MoE usage stats missing or empty")
+
+    latent_jsonl = artifacts / "latent_snapshot.jsonl"
+    valid_records = 0
+    if latent_jsonl.is_file():
+        try:
+            lines = latent_jsonl.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append(f"latent_snapshot.jsonl unreadable: {exc}")
+            lines = []
+        for line in lines:
+            if not line.strip():
+                continue
+            try:
+                json.loads(line)
+            except json.JSONDecodeError:
+                errors.append("latent_snapshot.jsonl contains an invalid record")
+                break
+            valid_records += 1
+    if valid_records == 0:
+        errors.append("latent_snapshot.jsonl missing or has no valid records")
+
+    overhead_json = artifacts / "overhead_result.json"
+    try:
+        overhead = json.loads(overhead_json.read_text(encoding="utf-8")) if overhead_json.is_file() else None
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        overhead = None
+        errors.append(f"overhead_result.json unreadable: {exc}")
+    if overhead is None:
+        errors.append("overhead_percent missing or null")
+    elif not isinstance(overhead, dict):
+        raise RuntimeError(f"overhead_result.json must be a JSON object, got {type(overhead).__name__}")
+    elif overhead.get("overhead_percent") is None:
+        errors.append("overhead_percent missing or null")
+
+    return errors
 
 
 def main() -> int:
@@ -346,8 +437,28 @@ def main() -> int:
         summary["error"] = str(exc)
 
     if summary["status"] == "PASS":
+        failures: list[str] = []
+        try:
+            failures.extend(verify_artifacts(artifacts))
+        except Exception as exc:  # noqa: BLE001
+            failures.append(f"artifact validation failed: {exc}")
         mot_records: list[dict[str, Any]] = []
-        summary["validation"] = {"errors": validate_records(mot_records), "mot": "see CSV artifacts"}
+        try:
+            mot_records = load_mot_records(artifacts / "mot_routing_detailed.csv")
+        except Exception as exc:  # noqa: BLE001
+            failures.append(f"MoT CSV load failed: {exc}")
+        validation_errors = validate_records(mot_records) if mot_records else ["no MoT records to validate"]
+        summary["validation"] = {
+            "errors": validation_errors,
+            "mot_records": len(mot_records),
+            "mot": "see CSV artifacts",
+        }
+        if validation_errors:
+            failures.append("MoT validation failed: " + "; ".join(validation_errors[:5]))
+        if failures:
+            logger.error("Smoke validation failed: %s", "; ".join(failures))
+            summary["status"] = "FAIL"
+            summary["error"] = "; ".join(failures)
 
     with (artifacts / "config.resolved.yaml").open("w", encoding="utf-8") as stream:
         yaml.safe_dump(config, stream, allow_unicode=True, sort_keys=False)
