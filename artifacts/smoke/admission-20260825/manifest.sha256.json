@@ -1,7 +1,7 @@
 {
   "config.resolved.yaml": "249e315482b3b32951ef3e2627783393e265c1f8976c926328b53c0f6f0c6e5c",
   "environment.json": "c244ed0c7a0be4f60193a7d356c96a6394829895d7b0fa87a0b3a86b10166053",
-  "full.log": "6f85e9cdf7bca154c2c9cb3504ac92c83bbcb2fabfbceb3b44b68c3b3718a194",
+  "full.log": "d48a8d1ad940ef8b5d7263767bebbe8d452a60d2fd18fd2a135ddcd0ae29272f",
   "latent_snapshot.jsonl": "aea9c32a34b72b7354ddfdd095c7bcb57c2725df0939c8855361907dd8249590",
   "moe_usage_stats.json": "70bd112452368b1d11503c46d89bfb824925e1e5030628e37000c222223b913f",
   "mot_deformable_activation_check.csv": "ad39db6c554cb172c8fc924ae11f872e8ce333e6aad8619605229bfcc5d936f1",
@@ -9,5 +9,5 @@
   "mot_routing_detailed.csv": "e6558c5120940c0f3665819548d1ea451db4e93d5c134835d9d5b1c9cd396457",
   "mot_routing_scenarios.csv": "ae2254e24b79bde7a4e1a9d1a49d467c2349d58a7c262e84165e16618cff6c8b",
   "overhead_result.json": "789c25ff94989a6794933348fd0ec481112f769806ab9a00815eae54449d584a",
-  "summary.json": "dfbd83391f025f1812086ae75529b5b267d40c1da2c5cad57bbf82671079c962"
+  "summary.json": "e4beef7c8d2db00ecdb8c293befd42f5c4e44fa51d02b2a0c1ba092591cf5711"
 }

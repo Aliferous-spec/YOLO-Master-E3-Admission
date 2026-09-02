@@ -4,7 +4,7 @@
   "run_id": "admission-20260825",
   "schema_version": "e3-routing-smoke/v0.1-candidate",
   "official_base_ref": "3eb6cd914b651a06e2cd08ea87d12c28cab95502",
-  "baseline_root": "D:\\YOLO-Master",
+  "baseline_root": "<baseline-root>",
   "environment": {
     "platform": "Windows-10-10.0.26200-SP0",
     "python": "3.11.9",

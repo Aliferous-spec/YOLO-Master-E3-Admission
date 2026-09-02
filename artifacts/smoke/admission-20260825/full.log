@@ -1,10 +1,10 @@
-2026-09-03 00:07:13,792 [INFO] E3 admission Smoke starting. baseline_root=D:\YOLO-Master
-2026-09-03 00:07:15,087 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-09-03 00:07:13,792 [INFO] E3 admission Smoke starting. baseline_root=<baseline-root>
+2026-09-03 00:07:15,087 [INFO] MoT: <local-user>\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
 2026-09-03 00:07:21,822 [INFO] WARNING no model scale passed. Assuming scale='n'.
-[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
-[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
-[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
-[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+[routing] wrote <baseline-root>\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote <baseline-root>\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote <baseline-root>\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote <baseline-root>\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
 
 2026-09-03 00:07:21,954 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
 2026-09-03 00:07:25,176 [INFO] MoE usage_stats: {
@@ -72,7 +72,7 @@
 }
 2026-09-03 00:07:25,177 [INFO] Latent: model=ultralytics/cfg/models/26/yolo26-master-latent-n.yaml size=640
 2026-09-03 00:07:25,645 [INFO] Latent records: 3
-2026-09-03 00:07:25,647 [INFO] Overhead: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
+2026-09-03 00:07:25,647 [INFO] Overhead: <local-user>\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
 2026-09-03 00:07:43,336 [INFO] WARNING no model scale passed. Assuming scale='n'.
 Module Name                                        | Type                           | Status
 ------------------------------------------------------------------------------------------
