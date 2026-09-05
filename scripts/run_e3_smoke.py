@@ -10,6 +10,7 @@ SHA-256 manifest.
 Example:
     python scripts/run_e3_smoke.py --config configs/e3_smoke.yaml
     python scripts/run_e3_smoke.py --config configs/e3_smoke.yaml --run-id smoke-20260905-01
+    python scripts/run_e3_smoke.py --verify-artifacts artifacts/smoke/smoke-20260905-01
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
+
 # ---------------------------------------------------------------------------
 # Metrics (pure helpers, covered by unit tests)
 # ---------------------------------------------------------------------------
@@ -60,6 +62,7 @@ def _to_plain(value: Any) -> Any:
             pass
     return value
 
+
 def _shannon_entropy(probabilities: Any) -> float:
     """Shannon entropy in nats over a non-negative probability vector."""
     import numpy as np
@@ -68,6 +71,7 @@ def _shannon_entropy(probabilities: Any) -> float:
     if positive.size == 0:
         return 0.0
     return float(-(positive * np.log(positive)).sum())
+
 
 def _gini_of_loads(loads: Any) -> float:
     """Gini coefficient over a non-negative load vector (0 = perfectly even)."""
@@ -82,6 +86,7 @@ def _gini_of_loads(loads: Any) -> float:
     denominator = float(ordered.size * total)
     coefficient = numerator / denominator - (ordered.size + 1.0) / ordered.size
     return float(np.clip(coefficient, 0.0, 1.0))
+
 
 def routing_metrics(expert_usage: Any) -> dict[str, Any]:
     """Summarize expert usage as normalized shares plus concentration metrics.
@@ -111,6 +116,7 @@ def routing_metrics(expert_usage: Any) -> dict[str, Any]:
         "dominant_expert_share": float(shares.max()) if shares.size else 0.0,
     }
 
+
 def validate_records(records: list[dict[str, Any]]) -> list[str]:
     """Run invariant checks over captured routing records."""
     errors: list[str] = []
@@ -129,6 +135,7 @@ def validate_records(records: list[dict[str, Any]]) -> list[str]:
                 errors.append(f"record {index}: non-finite {key}")
     return errors
 
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -140,12 +147,15 @@ def sha256_file(path: Path) -> str:
             digest.update(chunk)
     return digest.hexdigest()
 
+
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
+
 
 def load_config(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as stream:
         return yaml.safe_load(stream)
+
 
 def resolve_baseline_root(config: dict[str, Any], cli_root: str | None) -> Path:
     if cli_root:
@@ -158,10 +168,12 @@ def resolve_baseline_root(config: dict[str, Any], cli_root: str | None) -> Path:
             root = PACKAGE_ROOT / root
     return root.resolve()
 
+
 def generate_run_id() -> str:
     """Return a fresh unique run id (timestamp + random suffix)."""
     now = datetime.now().astimezone()
     return f"smoke-{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}"
+
 
 def resolve_run_id(config: Mapping[str, Any], cli_run_id: str | None) -> str:
     """CLI ``--run-id`` wins; otherwise every run gets a fresh unique id."""
@@ -169,8 +181,10 @@ def resolve_run_id(config: Mapping[str, Any], cli_run_id: str | None) -> str:
         return str(cli_run_id).strip()
     return generate_run_id()
 
+
 def smoke_artifacts_dir(package_root: Path, run_id: str) -> Path:
     return package_root / "artifacts" / "smoke" / run_id
+
 
 def setup_logging(artifacts: Path) -> logging.Logger:
     """Configure one file + one console handler per target log path.
@@ -207,6 +221,7 @@ def setup_logging(artifacts: Path) -> logging.Logger:
         logger.addHandler(console)
     return logger
 
+
 def collect_environment() -> dict[str, Any]:
     try:
         import torch
@@ -226,11 +241,13 @@ def collect_environment() -> dict[str, Any]:
         "captured_at": _now_iso(),
     }
 
+
 def _forward_random_image(module: Any, size: int) -> None:
     import torch
 
     with torch.no_grad():
         module(torch.randn(1, 3, int(size), int(size)))
+
 
 def _capture_model_records(
     model_config: str,
@@ -258,6 +275,7 @@ def _capture_model_records(
         training=False,
     )
     return records
+
 
 def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
     """Run the MoT diagnostic script, then capture real MoT v1 records."""
@@ -287,6 +305,7 @@ def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, 
         raise RuntimeError("MoT: no routing snapshots captured after real forward")
     logger.info("MoT routing records: %d", len(records))
     return {"returncode": result.returncode, "copied_files": copied, "records": records}
+
 
 def run_moe(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
     """Run MoE over the real validation dataset and capture v1 records."""
@@ -340,6 +359,7 @@ def run_moe(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, 
     logger.info("MoE routing records: %d", len(records))
     return {"usage_stats": stats, "hooked_modules": hooked, "records": records}
 
+
 def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
     """Run one real Latent forward and capture v1 records (plus legacy keys)."""
     from ultralytics import YOLO
@@ -383,6 +403,7 @@ def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger, 
     logger.info("Latent legacy keys records: %d", len(keys_records))
     return {"records": records, "module_count": len(records)}
 
+
 def parse_overhead_percent(text: str) -> float:
     """Parse ``overhead: 1.50%`` output, accepting optional +/- signs.
 
@@ -397,6 +418,7 @@ def parse_overhead_percent(text: str) -> float:
     if not math.isfinite(value):
         raise ValueError(f"overhead_percent must be finite, got {match.group(1)!r}")
     return value
+
 
 def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
     overhead = config["overhead"]
@@ -432,6 +454,7 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
         "output": text,
         "overhead_percent": overhead_percent,
     }
+
 
 def execute_smoke_steps(
     steps: Mapping[str, Callable[[], dict[str, Any]]],
@@ -473,12 +496,58 @@ def execute_smoke_steps(
         summary["error"] = "; ".join(f"{name}: {message}" for name, message in failures)
     return summary, collected
 
+
 def build_manifest(artifacts: Path) -> dict[str, str]:
     return {
         file.name: sha256_file(file)
         for file in sorted(artifacts.iterdir())
         if file.is_file() and file.name != "manifest.sha256.json"
     }
+
+
+def verify_manifest(artifacts: Path) -> list[str]:
+    """Verify an artifacts directory: manifest presence, SHA-256, run_id.
+
+    Returns a list of human-readable errors; an empty list means the run is
+    consistent. Missing or tampered files always fail with their path.
+    """
+    artifacts = Path(artifacts)
+    errors: list[str] = []
+    manifest_path = artifacts / "manifest.sha256.json"
+    if not manifest_path.is_file():
+        return [f"manifest missing: {manifest_path}"]
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return [f"manifest unreadable: {manifest_path}: {exc}"]
+    if not isinstance(manifest, dict):
+        return [f"manifest must be a JSON object mapping file name to sha256: {manifest_path}"]
+
+    for name, expected in sorted(manifest.items()):
+        path = artifacts / name
+        if not path.is_file():
+            errors.append(f"file missing: {path}")
+            continue
+        actual = sha256_file(path)
+        if actual != str(expected):
+            errors.append(f"sha256 mismatch: {path} (expected {expected}, got {actual})")
+
+    run_id = artifacts.name
+    summary_path = artifacts / "summary.json"
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.is_file() else None
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        errors.append(f"summary unreadable: {summary_path}: {exc}")
+        summary = None
+    if summary is None:
+        errors.append(f"summary missing: {summary_path}")
+    elif summary.get("run_id") != run_id:
+        errors.append(
+            f"run_id mismatch: summary run_id {summary.get('run_id')!r} != artifacts dir name {run_id!r}"
+        )
+    return errors
+
 
 def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
     """Read ``mot_routing_detailed.csv`` into per-decision validation records."""
@@ -500,6 +569,7 @@ def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
         scene, image_id, layer = key
         records.append({"scene": scene, "image_id": image_id, "layer": layer, **routing_metrics(loads)})
     return records
+
 
 def verify_artifacts(artifacts: Path) -> list[str]:
     """Return post-condition errors for the MoE/Latent/overhead evidence files."""
@@ -553,12 +623,31 @@ def verify_artifacts(artifacts: Path) -> list[str]:
 
     return errors
 
-def main() -> int:
+
+def verify_cli_artifacts(artifacts: Path) -> int:
+    errors = verify_manifest(artifacts)
+    for error in errors:
+        print(f"ERROR: {error}")
+    if errors:
+        print(f"result=FAIL ({len(errors)} error(s))")
+        return 1
+    print(f"result=PASS manifest OK: {artifacts}")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the E3 P0 smoke package")
     parser.add_argument("--config", default=str(PACKAGE_ROOT / "configs" / "e3_smoke.yaml"))
     parser.add_argument("--baseline-root", default=None, help="Override the deployed YOLO-Master checkout path")
     parser.add_argument("--run-id", default=None, help="Explicit run id; defaults to a fresh unique id per run")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--verify-artifacts", default=None, metavar="DIR",
+        help="Verify an artifacts directory (manifest + SHA-256 + run_id) and exit",
+    )
+    args = parser.parse_args(argv)
+
+    if args.verify_artifacts:
+        return verify_cli_artifacts(Path(args.verify_artifacts))
 
     config = load_config(Path(args.config))
     baseline_root = resolve_baseline_root(config, args.baseline_root)
@@ -633,12 +722,21 @@ def main() -> int:
     with (artifacts / "summary.json").open("w", encoding="utf-8") as stream:
         json.dump(summary, stream, ensure_ascii=False, indent=2)
 
+    # Log the final result before hashing, then close the file handler so the
+    # manifest hashes full.log in its final, flushed state.
+    logger.info("result=%s", summary["status"])
+    for handler in list(logger.handlers):
+        if isinstance(handler, logging.FileHandler):
+            handler.flush()
+            handler.close()
+            logger.removeHandler(handler)
+
     with (artifacts / "manifest.sha256.json").open("w", encoding="utf-8") as stream:
         json.dump(build_manifest(artifacts), stream, ensure_ascii=False, indent=2)
 
-    logger.info("result=%s", summary["status"])
     print(f"result={summary['status']}")
     return 0 if summary["status"] == "PASS" else 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

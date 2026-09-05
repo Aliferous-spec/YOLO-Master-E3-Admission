@@ -5,6 +5,7 @@ Covers:
 - P0-3 unique auto run_id, --run-id override, per-run artifact isolation.
 - P0-4 overhead percent parsing (signed values, NaN/Inf rejection) and
       idempotent ``setup_logging``.
+- P0-5 standalone ``verify_manifest`` (missing/tampered/run_id mismatch).
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from scripts.run_e3_smoke import (
     resolve_run_id,
     setup_logging,
     smoke_artifacts_dir,
+    verify_manifest,
 )
 
 # ---------------------------------------------------------------------------
@@ -39,12 +41,14 @@ def _ok_step(name: str, ran: list[str]):
 
     return step
 
+
 def _boom_step(name: str, ran: list[str], message: str = "exploded"):
     def step() -> dict:
         ran.append(name)
         raise RuntimeError(message)
 
     return step
+
 
 def test_execute_smoke_steps_does_not_block_later_steps() -> None:
     ran: list[str] = []
@@ -69,6 +73,7 @@ def test_execute_smoke_steps_does_not_block_later_steps() -> None:
     assert "overhead is broken" in summary["error"]
     assert records == []
 
+
 def test_execute_smoke_steps_records_times() -> None:
     logger = logging.getLogger("test-e3-times")
     summary, _ = execute_smoke_steps({"a": _ok_step("a", [])}, logger)
@@ -82,12 +87,14 @@ def test_execute_smoke_steps_records_times() -> None:
     assert step["status"] == "PASS"
     assert "error" not in step
 
+
 # ---------------------------------------------------------------------------
 # P0-3: run_id and artifact isolation
 # ---------------------------------------------------------------------------
 
 def test_generate_run_id_is_unique() -> None:
     assert generate_run_id() != generate_run_id()
+
 
 def test_resolve_run_id_prefers_cli_and_auto_generates_unique_default() -> None:
     assert resolve_run_id({}, "my-run-1") == "my-run-1"
@@ -96,6 +103,7 @@ def test_resolve_run_id_prefers_cli_and_auto_generates_unique_default() -> None:
     assert first != second  # unique per run even when config pins a legacy id
     assert first != "admission-20260825"
 
+
 def test_smoke_artifacts_dir_is_per_run(tmp_path: Path) -> None:
     first = smoke_artifacts_dir(tmp_path, "run-one")
     second = smoke_artifacts_dir(tmp_path, "run-two")
@@ -103,6 +111,7 @@ def test_smoke_artifacts_dir_is_per_run(tmp_path: Path) -> None:
     assert first.parent == tmp_path / "artifacts" / "smoke"
     assert first.name == "run-one"
     assert second.name == "run-two"
+
 
 def test_two_runs_keep_manifests_isolated(tmp_path: Path) -> None:
     first = smoke_artifacts_dir(tmp_path, "run-a")
@@ -118,6 +127,7 @@ def test_two_runs_keep_manifests_isolated(tmp_path: Path) -> None:
     assert set(manifest_b) == {"evidence-b.txt"}
     assert not (set(manifest_a) & set(manifest_b))
 
+
 # ---------------------------------------------------------------------------
 # P0-4: overhead parsing and logging idempotency
 # ---------------------------------------------------------------------------
@@ -128,10 +138,12 @@ def test_parse_overhead_percent_accepts_signed_values() -> None:
     assert parse_overhead_percent("overhead: 0.99%") == pytest.approx(0.99)
     assert parse_overhead_percent("overhead: 1.50% (target < 10%)") == pytest.approx(1.5)
 
+
 def test_parse_overhead_percent_rejects_non_finite_and_missing() -> None:
     for text in ("overhead: nan%", "overhead: inf%", "overhead: -inf%", "no overhead", ""):
         with pytest.raises(ValueError):
             parse_overhead_percent(text)
+
 
 def test_setup_logging_is_idempotent(tmp_path: Path) -> None:
     logger = setup_logging(tmp_path)
@@ -141,6 +153,7 @@ def test_setup_logging_is_idempotent(tmp_path: Path) -> None:
     assert again is logger
     assert list(logger.handlers) == before  # no duplicate handlers
 
+
 def test_setup_logging_replaces_file_handler_for_new_run(tmp_path: Path) -> None:
     logger = setup_logging(tmp_path / "run-a")
     setup_logging(tmp_path / "run-b")
@@ -148,3 +161,53 @@ def test_setup_logging_replaces_file_handler_for_new_run(tmp_path: Path) -> None
     assert len(file_handlers) == 1
     assert Path(file_handlers[0].baseFilename) == (tmp_path / "run-b" / "full.log").resolve()
 
+
+# ---------------------------------------------------------------------------
+# P0-5: manifest verification
+# ---------------------------------------------------------------------------
+
+def _make_run_artifacts(root: Path, run_id: str) -> Path:
+    artifacts = root / run_id
+    artifacts.mkdir(parents=True)
+    (artifacts / "summary.json").write_text(json.dumps({"run_id": run_id}), encoding="utf-8")
+    (artifacts / "evidence.txt").write_text("hello", encoding="utf-8")
+    manifest = build_manifest(artifacts)
+    (artifacts / "manifest.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return artifacts
+
+
+def test_verify_manifest_accepts_clean_run(tmp_path: Path) -> None:
+    artifacts = _make_run_artifacts(tmp_path, "run-ok")
+    assert verify_manifest(artifacts) == []
+
+
+def test_verify_manifest_reports_missing_manifest(tmp_path: Path) -> None:
+    artifacts = tmp_path / "run-no-manifest"
+    artifacts.mkdir()
+    errors = verify_manifest(artifacts)
+    assert any("manifest missing" in error for error in errors)
+
+
+def test_verify_manifest_reports_tampered_file(tmp_path: Path) -> None:
+    artifacts = _make_run_artifacts(tmp_path, "run-tamper")
+    (artifacts / "evidence.txt").write_text("tampered!", encoding="utf-8")
+    errors = verify_manifest(artifacts)
+    assert any("sha256 mismatch" in error and "evidence.txt" in error for error in errors)
+
+
+def test_verify_manifest_reports_missing_file(tmp_path: Path) -> None:
+    artifacts = _make_run_artifacts(tmp_path, "run-missing")
+    (artifacts / "evidence.txt").unlink()
+    errors = verify_manifest(artifacts)
+    assert any("file missing" in error and "evidence.txt" in error for error in errors)
+
+
+def test_verify_manifest_reports_run_id_mismatch(tmp_path: Path) -> None:
+    artifacts = tmp_path / "run-dir"
+    artifacts.mkdir()
+    (artifacts / "summary.json").write_text(json.dumps({"run_id": "other-run"}), encoding="utf-8")
+    (artifacts / "evidence.txt").write_text("hello", encoding="utf-8")
+    manifest = build_manifest(artifacts)
+    (artifacts / "manifest.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+    errors = verify_manifest(artifacts)
+    assert any("run_id" in error and "run-dir" in error for error in errors)
