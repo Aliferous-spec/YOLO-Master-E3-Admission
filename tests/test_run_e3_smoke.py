@@ -3,6 +3,8 @@
 Covers:
 - P0-2 failure isolation across family steps and summary timing/status/error.
 - P0-3 unique auto run_id, --run-id override, per-run artifact isolation.
+- P0-4 overhead percent parsing (signed values, NaN/Inf rejection) and
+      idempotent ``setup_logging``.
 """
 
 from __future__ import annotations
@@ -20,7 +22,9 @@ from scripts.run_e3_smoke import (
     build_manifest,
     execute_smoke_steps,
     generate_run_id,
+    parse_overhead_percent,
     resolve_run_id,
+    setup_logging,
     smoke_artifacts_dir,
 )
 
@@ -113,4 +117,34 @@ def test_two_runs_keep_manifests_isolated(tmp_path: Path) -> None:
     assert set(manifest_a) == {"evidence-a.txt"}
     assert set(manifest_b) == {"evidence-b.txt"}
     assert not (set(manifest_a) & set(manifest_b))
+
+# ---------------------------------------------------------------------------
+# P0-4: overhead parsing and logging idempotency
+# ---------------------------------------------------------------------------
+
+def test_parse_overhead_percent_accepts_signed_values() -> None:
+    assert parse_overhead_percent("overhead: -5.01%") == pytest.approx(-5.01)
+    assert parse_overhead_percent("overhead: +1.20%") == pytest.approx(1.2)
+    assert parse_overhead_percent("overhead: 0.99%") == pytest.approx(0.99)
+    assert parse_overhead_percent("overhead: 1.50% (target < 10%)") == pytest.approx(1.5)
+
+def test_parse_overhead_percent_rejects_non_finite_and_missing() -> None:
+    for text in ("overhead: nan%", "overhead: inf%", "overhead: -inf%", "no overhead", ""):
+        with pytest.raises(ValueError):
+            parse_overhead_percent(text)
+
+def test_setup_logging_is_idempotent(tmp_path: Path) -> None:
+    logger = setup_logging(tmp_path)
+    before = list(logger.handlers)
+    assert before
+    again = setup_logging(tmp_path)
+    assert again is logger
+    assert list(logger.handlers) == before  # no duplicate handlers
+
+def test_setup_logging_replaces_file_handler_for_new_run(tmp_path: Path) -> None:
+    logger = setup_logging(tmp_path / "run-a")
+    setup_logging(tmp_path / "run-b")
+    file_handlers = [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
+    assert len(file_handlers) == 1
+    assert Path(file_handlers[0].baseFilename) == (tmp_path / "run-b" / "full.log").resolve()
 

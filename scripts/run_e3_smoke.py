@@ -173,15 +173,38 @@ def smoke_artifacts_dir(package_root: Path, run_id: str) -> Path:
     return package_root / "artifacts" / "smoke" / run_id
 
 def setup_logging(artifacts: Path) -> logging.Logger:
+    """Configure one file + one console handler per target log path.
+
+    Repeated calls never duplicate handlers: calling again with the same
+    artifacts dir is a no-op, and calling with a different dir replaces the
+    file handler so one process can run several isolated runs.
+    """
+    artifacts = Path(artifacts)
+    artifacts.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger("e3-smoke")
     logger.setLevel(logging.INFO)
+    target = (artifacts / "full.log").resolve()
+
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler) and Path(handler.baseFilename).resolve() == target:
+            return logger
+
+    # Replace any file handler from a previous run without duplicating it.
+    for handler in list(logger.handlers):
+        if isinstance(handler, logging.FileHandler):
+            logger.removeHandler(handler)
+            handler.close()
+
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    handler = logging.FileHandler(artifacts / "full.log", encoding="utf-8")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    console = logging.StreamHandler()
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    file_handler = logging.FileHandler(artifacts / "full.log", encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    if not any(isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler)
+               for handler in logger.handlers):
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
     return logger
 
 def collect_environment() -> dict[str, Any]:
@@ -360,6 +383,21 @@ def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger, 
     logger.info("Latent legacy keys records: %d", len(keys_records))
     return {"records": records, "module_count": len(records)}
 
+def parse_overhead_percent(text: str) -> float:
+    """Parse ``overhead: 1.50%`` output, accepting optional +/- signs.
+
+    NaN / Inf tokens never match the numeric pattern and raise ValueError, so
+    non-finite overhead values are rejected instead of being recorded.
+    """
+    pattern = re.compile(r"overhead:\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*%")
+    match = pattern.search(text or "")
+    if match is None:
+        raise ValueError("overhead_percent not found in overhead script output (missing or non-finite)")
+    value = float(match.group(1))
+    if not math.isfinite(value):
+        raise ValueError(f"overhead_percent must be finite, got {match.group(1)!r}")
+    return value
+
 def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
     overhead = config["overhead"]
     command = [
@@ -371,15 +409,15 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
         "--size", str(overhead.get("size", 640)),
     ]
     logger.info("Overhead: %s", " ".join(command))
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
     text = result.stdout + result.stderr
     logger.info(text)
     if result.returncode != 0:
         raise RuntimeError(f"overhead measurement failed with rc={result.returncode}")
-    match = re.search(r"overhead:\s+([\d.]+)%", text)
-    if match is None:
-        raise RuntimeError("overhead_percent not found in overhead script output")
-    overhead_percent = float(match.group(1))
+    try:
+        overhead_percent = parse_overhead_percent(text)
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
     overhead_result = {
         "returncode": result.returncode,
         "output": text,
@@ -388,6 +426,7 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
     (artifacts / "overhead_result.json").write_text(
         json.dumps(overhead_result, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    logger.info("overhead_percent=%s", overhead_percent)
     return {
         "returncode": result.returncode,
         "output": text,
