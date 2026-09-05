@@ -2,6 +2,7 @@
 
 Covers:
 - P0-2 failure isolation across family steps and summary timing/status/error.
+- P0-3 unique auto run_id, --run-id override, per-run artifact isolation.
 """
 
 from __future__ import annotations
@@ -16,7 +17,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.run_e3_smoke import (
+    build_manifest,
     execute_smoke_steps,
+    generate_run_id,
+    resolve_run_id,
+    smoke_artifacts_dir,
 )
 
 # ---------------------------------------------------------------------------
@@ -72,4 +77,40 @@ def test_execute_smoke_steps_records_times() -> None:
     assert step["finished_at"]
     assert step["status"] == "PASS"
     assert "error" not in step
+
+# ---------------------------------------------------------------------------
+# P0-3: run_id and artifact isolation
+# ---------------------------------------------------------------------------
+
+def test_generate_run_id_is_unique() -> None:
+    assert generate_run_id() != generate_run_id()
+
+def test_resolve_run_id_prefers_cli_and_auto_generates_unique_default() -> None:
+    assert resolve_run_id({}, "my-run-1") == "my-run-1"
+    first = resolve_run_id({"run_id": "admission-20260825"}, None)
+    second = resolve_run_id({"run_id": "admission-20260825"}, None)
+    assert first != second  # unique per run even when config pins a legacy id
+    assert first != "admission-20260825"
+
+def test_smoke_artifacts_dir_is_per_run(tmp_path: Path) -> None:
+    first = smoke_artifacts_dir(tmp_path, "run-one")
+    second = smoke_artifacts_dir(tmp_path, "run-two")
+    assert first != second
+    assert first.parent == tmp_path / "artifacts" / "smoke"
+    assert first.name == "run-one"
+    assert second.name == "run-two"
+
+def test_two_runs_keep_manifests_isolated(tmp_path: Path) -> None:
+    first = smoke_artifacts_dir(tmp_path, "run-a")
+    second = smoke_artifacts_dir(tmp_path, "run-b")
+    first.mkdir(parents=True)
+    second.mkdir(parents=True)
+    (first / "evidence-a.txt").write_text("a", encoding="utf-8")
+    (second / "evidence-b.txt").write_text("b", encoding="utf-8")
+
+    manifest_a = build_manifest(first)
+    manifest_b = build_manifest(second)
+    assert set(manifest_a) == {"evidence-a.txt"}
+    assert set(manifest_b) == {"evidence-b.txt"}
+    assert not (set(manifest_a) & set(manifest_b))
 

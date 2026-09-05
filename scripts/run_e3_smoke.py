@@ -1,13 +1,15 @@
-"""Run the E3 P0 smoke (MoT + MoE + Latent) without touching YOLO-Master core.
+"""Run the E3 P0 smoke (MoT + MoE + Latent + overhead) without touching YOLO-Master core.
 
 The script is executed with the deployed YOLO-Master baseline Python. It walks a
 YOLO-Master checkout, runs one real forward per routing family, adapts the
 ``last_routing_snapshot`` modules through the existing v1 adapters into
 ``routing_records.jsonl``, measures hook overhead, isolates family failures and
-archives evidence into ``artifacts/smoke/<run_id>/`` with a SHA-256 manifest.
+archives evidence into a per-run ``artifacts/smoke/<run_id>/`` directory with a
+SHA-256 manifest.
 
 Example:
     python scripts/run_e3_smoke.py --config configs/e3_smoke.yaml
+    python scripts/run_e3_smoke.py --config configs/e3_smoke.yaml --run-id smoke-20260905-01
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
@@ -154,6 +157,20 @@ def resolve_baseline_root(config: dict[str, Any], cli_root: str | None) -> Path:
         if not root.is_absolute():
             root = PACKAGE_ROOT / root
     return root.resolve()
+
+def generate_run_id() -> str:
+    """Return a fresh unique run id (timestamp + random suffix)."""
+    now = datetime.now().astimezone()
+    return f"smoke-{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}"
+
+def resolve_run_id(config: Mapping[str, Any], cli_run_id: str | None) -> str:
+    """CLI ``--run-id`` wins; otherwise every run gets a fresh unique id."""
+    if cli_run_id:
+        return str(cli_run_id).strip()
+    return generate_run_id()
+
+def smoke_artifacts_dir(package_root: Path, run_id: str) -> Path:
+    return package_root / "artifacts" / "smoke" / run_id
 
 def setup_logging(artifacts: Path) -> logging.Logger:
     logger = logging.getLogger("e3-smoke")
@@ -501,6 +518,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the E3 P0 smoke package")
     parser.add_argument("--config", default=str(PACKAGE_ROOT / "configs" / "e3_smoke.yaml"))
     parser.add_argument("--baseline-root", default=None, help="Override the deployed YOLO-Master checkout path")
+    parser.add_argument("--run-id", default=None, help="Explicit run id; defaults to a fresh unique id per run")
     args = parser.parse_args()
 
     config = load_config(Path(args.config))
@@ -509,8 +527,8 @@ def main() -> int:
         raise SystemExit(f"baseline_root not found: {baseline_root}")
     os.chdir(baseline_root)
 
-    run_id = config.get("run_id", "admission-20260825")
-    artifacts = PACKAGE_ROOT / "artifacts" / "smoke" / run_id
+    run_id = resolve_run_id(config, args.run_id)
+    artifacts = smoke_artifacts_dir(PACKAGE_ROOT, run_id)
     artifacts.mkdir(parents=True, exist_ok=True)
     logger = setup_logging(artifacts)
     logger.info("E3 P0 smoke starting. run_id=%s baseline_root=%s", run_id, baseline_root)
