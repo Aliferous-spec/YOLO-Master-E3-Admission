@@ -3,8 +3,8 @@
 The script is executed with the deployed YOLO-Master baseline Python. It walks a
 YOLO-Master checkout, runs one real forward per routing family, adapts the
 ``last_routing_snapshot`` modules through the existing v1 adapters into
-``routing_records.jsonl``, and archives evidence into
-``artifacts/smoke/<run_id>/`` with a SHA-256 manifest.
+``routing_records.jsonl``, measures hook overhead, isolates family failures and
+archives evidence into ``artifacts/smoke/<run_id>/`` with a SHA-256 manifest.
 
 Example:
     python scripts/run_e3_smoke.py --config configs/e3_smoke.yaml
@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -376,6 +377,46 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
         "overhead_percent": overhead_percent,
     }
 
+def execute_smoke_steps(
+    steps: Mapping[str, Callable[[], dict[str, Any]]],
+    logger: logging.Logger,
+) -> tuple[dict[str, Any], list[Any]]:
+    """Run every family step sequentially; one failure never blocks the rest.
+
+    Returns (summary, collected_records).  Summary carries started_at /
+    finished_at / status / error plus one entry per step with its own status,
+    error, and timing.
+    """
+    started_at = _now_iso()
+    summary: dict[str, Any] = {"status": "PASS", "steps": {}, "started_at": started_at}
+    collected: list[Any] = []
+    failures: list[tuple[str, str]] = []
+    for name, step_fn in steps.items():
+        step_started = _now_iso()
+        try:
+            result = step_fn()
+        except Exception as exc:  # noqa: BLE001
+            logger.error("%s step failed: %s", name, exc)
+            summary["steps"][name] = {
+                "status": "FAIL",
+                "error": str(exc),
+                "started_at": step_started,
+                "finished_at": _now_iso(),
+            }
+            summary["status"] = "FAIL"
+            failures.append((name, str(exc)))
+            continue
+        step: dict[str, Any] = {"status": "PASS", "started_at": step_started, "finished_at": _now_iso()}
+        records = result.get("records") or []
+        if records:
+            step["records"] = len(records)
+            collected.extend(records)
+        summary["steps"][name] = step
+    summary["finished_at"] = _now_iso()
+    if failures:
+        summary["error"] = "; ".join(f"{name}: {message}" for name, message in failures)
+    return summary, collected
+
 def build_manifest(artifacts: Path) -> dict[str, str]:
     return {
         file.name: sha256_file(file)
@@ -479,7 +520,7 @@ def main() -> int:
         json.dump(environment, stream, ensure_ascii=False, indent=2)
 
     summary: dict[str, Any] = {
-        "scope": "E3 P0 smoke; MoT/MoE/Latent unified v1 capture + overhead",
+        "scope": "E3 P0 smoke; MoT/MoE/Latent unified v1 capture + overhead; isolated steps",
         "run_id": run_id,
         "schema_version": config.get("schema_version"),
         "official_base_ref": config.get("official_base_ref"),
@@ -487,22 +528,14 @@ def main() -> int:
         "environment": environment,
     }
 
-    records: list[Any] = []
-    try:
-        mot_result = run_mot(config, artifacts, logger, run_id=run_id)
-        summary["mot"] = mot_result
-        records.extend(mot_result.get("records") or [])
-        moe_result = run_moe(config, artifacts, logger, run_id=run_id)
-        summary["moe"] = moe_result
-        records.extend(moe_result.get("records") or [])
-        latent_result = run_latent(config, artifacts, logger, run_id=run_id)
-        summary["latent"] = latent_result
-        records.extend(latent_result.get("records") or [])
-        summary["overhead"] = run_overhead(config, artifacts, logger)
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Smoke step failed: %s", exc)
-        summary["status"] = "FAIL"
-        summary["error"] = str(exc)
+    steps: dict[str, Callable[[], dict[str, Any]]] = {
+        "mot": lambda: run_mot(config, artifacts, logger, run_id=run_id),
+        "moe": lambda: run_moe(config, artifacts, logger, run_id=run_id),
+        "latent": lambda: run_latent(config, artifacts, logger, run_id=run_id),
+        "overhead": lambda: run_overhead(config, artifacts, logger),
+    }
+    step_summary, records = execute_smoke_steps(steps, logger)
+    summary.update(step_summary)
 
     routing_path = artifacts / "routing_records.jsonl"
     if records:
