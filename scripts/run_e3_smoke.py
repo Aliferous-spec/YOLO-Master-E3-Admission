@@ -1,9 +1,10 @@
-"""Run the E3 admission Smoke (MoT + MoE + Latent) without modifying YOLO-Master core.
+"""Run the E3 P0 smoke (MoT + MoE + Latent) without touching YOLO-Master core.
 
 The script is executed with the deployed YOLO-Master baseline Python. It walks a
-YOLO-Master checkout, collects one routing snapshot per family, measures hook
-overhead, and archives evidence into ``artifacts/smoke/<run_id>/`` with a SHA-256
-manifest.
+YOLO-Master checkout, runs one real forward per routing family, adapts the
+``last_routing_snapshot`` modules through the existing v1 adapters into
+``routing_records.jsonl``, and archives evidence into
+``artifacts/smoke/<run_id>/`` with a SHA-256 manifest.
 
 Example:
     python scripts/run_e3_smoke.py --config configs/e3_smoke.yaml
@@ -30,7 +31,8 @@ from typing import Any
 import yaml
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-
+if str(PACKAGE_ROOT) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_ROOT))
 
 # ---------------------------------------------------------------------------
 # Metrics (pure helpers, covered by unit tests)
@@ -54,7 +56,6 @@ def _to_plain(value: Any) -> Any:
             pass
     return value
 
-
 def _shannon_entropy(probabilities: Any) -> float:
     """Shannon entropy in nats over a non-negative probability vector."""
     import numpy as np
@@ -63,7 +64,6 @@ def _shannon_entropy(probabilities: Any) -> float:
     if positive.size == 0:
         return 0.0
     return float(-(positive * np.log(positive)).sum())
-
 
 def _gini_of_loads(loads: Any) -> float:
     """Gini coefficient over a non-negative load vector (0 = perfectly even)."""
@@ -78,7 +78,6 @@ def _gini_of_loads(loads: Any) -> float:
     denominator = float(ordered.size * total)
     coefficient = numerator / denominator - (ordered.size + 1.0) / ordered.size
     return float(np.clip(coefficient, 0.0, 1.0))
-
 
 def routing_metrics(expert_usage: Any) -> dict[str, Any]:
     """Summarize expert usage as normalized shares plus concentration metrics.
@@ -108,8 +107,6 @@ def routing_metrics(expert_usage: Any) -> dict[str, Any]:
         "dominant_expert_share": float(shares.max()) if shares.size else 0.0,
     }
 
-
-
 def validate_records(records: list[dict[str, Any]]) -> list[str]:
     """Run invariant checks over captured routing records."""
     errors: list[str] = []
@@ -128,7 +125,6 @@ def validate_records(records: list[dict[str, Any]]) -> list[str]:
                 errors.append(f"record {index}: non-finite {key}")
     return errors
 
-
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -140,11 +136,12 @@ def sha256_file(path: Path) -> str:
             digest.update(chunk)
     return digest.hexdigest()
 
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 def load_config(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as stream:
         return yaml.safe_load(stream)
-
 
 def resolve_baseline_root(config: dict[str, Any], cli_root: str | None) -> Path:
     if cli_root:
@@ -156,7 +153,6 @@ def resolve_baseline_root(config: dict[str, Any], cli_root: str | None) -> Path:
         if not root.is_absolute():
             root = PACKAGE_ROOT / root
     return root.resolve()
-
 
 def setup_logging(artifacts: Path) -> logging.Logger:
     logger = logging.getLogger("e3-smoke")
@@ -170,12 +166,11 @@ def setup_logging(artifacts: Path) -> logging.Logger:
     logger.addHandler(console)
     return logger
 
-
 def collect_environment() -> dict[str, Any]:
     try:
         import torch
         import ultralytics
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise RuntimeError(
             "ultralytics/torch not importable. Run this script with the deployed "
             f"YOLO-Master baseline Python. ({exc})"
@@ -187,11 +182,44 @@ def collect_environment() -> dict[str, Any]:
         "torch": torch.__version__,
         "ultralytics": ultralytics.__version__,
         "cwd": "<baseline-root>",
-        "captured_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "captured_at": _now_iso(),
     }
 
+def _forward_random_image(module: Any, size: int) -> None:
+    import torch
 
-def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
+    with torch.no_grad():
+        module(torch.randn(1, 3, int(size), int(size)))
+
+def _capture_model_records(
+    model_config: str,
+    *,
+    run_id: str,
+    size: int,
+    force_moe_snapshot: bool = False,
+) -> list[Any]:
+    """Build one real model, run one real forward, adapt snapshots to records."""
+    from ultralytics import YOLO
+
+    from scripts.routing_capture import capture_records
+
+    model = YOLO(model_config)
+    module = model.model.eval()
+    if force_moe_snapshot:
+        for _, mod in module.named_modules():
+            if "moe" in mod.__class__.__module__.lower() and hasattr(mod, "last_routing_snapshot"):
+                mod._moe_force_snapshot = True
+    records = capture_records(
+        module,
+        run_id=run_id,
+        captured_at=_now_iso(),
+        forward=lambda root: _forward_random_image(root, size),
+        training=False,
+    )
+    return records
+
+def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
+    """Run the MoT diagnostic script, then capture real MoT v1 records."""
     mot = config["mot"]
     output_dir = Path(mot["output_dir"])
     if output_dir.is_dir():
@@ -200,7 +228,7 @@ def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> 
                 file.unlink()
     command = [sys.executable, str(Path(mot["script"])), *[str(a) for a in mot.get("args", [])]]
     logger.info("MoT: %s", " ".join(command))
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
     logger.info(result.stdout)
     if result.stderr:
         logger.info("MoT stderr: %s", result.stderr)
@@ -212,17 +240,28 @@ def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> 
             for file in sorted(output_dir.glob(pattern)):
                 shutil.copy2(file, artifacts / file.name)
                 copied.append(file.name)
-    return {"returncode": result.returncode, "copied_files": copied}
 
+    records = _capture_model_records(mot["model_config"], run_id=run_id, size=int(mot.get("image_size", 640)))
+    if not records:
+        raise RuntimeError("MoT: no routing snapshots captured after real forward")
+    logger.info("MoT routing records: %d", len(records))
+    return {"returncode": result.returncode, "copied_files": copied, "records": records}
 
-def run_moe(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
+def run_moe(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
+    """Run MoE over the real validation dataset and capture v1 records."""
     from ultralytics import YOLO
     from ultralytics.nn.modules.moe.analysis import ExpertUsageTracker
 
     moe = config["moe"]
     logger.info("MoE: model=%s dataset=%s", moe["model_config"], moe.get("dataset"))
     model = YOLO(moe["model_config"])
-    with ExpertUsageTracker(model.model) as tracker:
+    module = model.model
+    # MoE routers only refresh their snapshot every MOE_SNAPSHOT_INTERVAL
+    # forwards unless forced; request a snapshot on the val forward we run.
+    for _, mod in module.named_modules():
+        if "moe" in mod.__class__.__module__.lower() and hasattr(mod, "last_routing_snapshot"):
+            mod._moe_force_snapshot = True
+    with ExpertUsageTracker(module) as tracker:
         model.val(
             data=moe.get("dataset", "coco8.yaml"),
             split=moe.get("dataset_split", "val"),
@@ -242,24 +281,54 @@ def run_moe(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> 
         json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     logger.info("MoE usage_stats: %s", json.dumps(stats, ensure_ascii=False, indent=2))
-    return {"usage_stats": stats, "hooked_modules": hooked}
-def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
+
+    # Upstream MoE routers only publish ``last_routing_snapshot`` inside a
+    # training-mode forward, so run one real training-mode forward (the flags
+    # above force every routed layer to refresh its snapshot this step).
     import torch
+
+    module.train()
+    _ = module(torch.randn(1, 3, 640, 640))
+    del _
+
+    from scripts.routing_capture import capture_records
+
+    records = capture_records(module, run_id=run_id, captured_at=_now_iso(), training=True)
+    if not records:
+        raise RuntimeError("MoE: no last_routing_snapshot captured after val forward")
+    logger.info("MoE routing records: %d", len(records))
+    return {"usage_stats": stats, "hooked_modules": hooked, "records": records}
+
+def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
+    """Run one real Latent forward and capture v1 records (plus legacy keys)."""
     from ultralytics import YOLO
+
+    from scripts.routing_capture import capture_records
 
     latent = config["latent"]
     logger.info("Latent: model=%s size=%s", latent["model_config"], latent.get("image_size", 640))
     model = YOLO(latent["model_config"])
     module = model.model.eval()
     size = int(latent.get("image_size", 640))
-    with torch.no_grad():
-        module(torch.randn(1, 3, size, size))
-    records: list[dict[str, Any]] = []
+
+    records = capture_records(
+        module,
+        run_id=run_id,
+        captured_at=_now_iso(),
+        forward=lambda root: _forward_random_image(root, size),
+        training=False,
+    )
+    if not records:
+        raise RuntimeError("no latent routing snapshots captured")
+    logger.info("Latent routing records: %d", len(records))
+
+    # Legacy keys-only summary, kept for the 8.25 admission artifact.
+    keys_records: list[dict[str, Any]] = []
     for name, mod in module.named_modules():
         snapshot = getattr(mod, "last_routing_snapshot", None)
         if snapshot:
             keys = sorted(snapshot.keys())
-            records.append(
+            keys_records.append(
                 {
                     "module_name": name,
                     "module_type": mod.__class__.__name__,
@@ -267,14 +336,11 @@ def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger) 
                     "keys": keys,
                 }
             )
-    if not records:
-        raise RuntimeError("no latent routing snapshots captured")
     with (artifacts / "latent_snapshot.jsonl").open("w", encoding="utf-8") as stream:
-        for record in records:
+        for record in keys_records:
             stream.write(json.dumps(record, ensure_ascii=False) + "\n")
-    logger.info("Latent records: %d", len(records))
+    logger.info("Latent legacy keys records: %d", len(keys_records))
     return {"records": records, "module_count": len(records)}
-
 
 def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger) -> dict[str, Any]:
     overhead = config["overhead"]
@@ -310,14 +376,12 @@ def run_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger
         "overhead_percent": overhead_percent,
     }
 
-
 def build_manifest(artifacts: Path) -> dict[str, str]:
     return {
         file.name: sha256_file(file)
         for file in sorted(artifacts.iterdir())
         if file.is_file() and file.name != "manifest.sha256.json"
     }
-
 
 def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
     """Read ``mot_routing_detailed.csv`` into per-decision validation records."""
@@ -339,7 +403,6 @@ def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
         scene, image_id, layer = key
         records.append({"scene": scene, "image_id": image_id, "layer": layer, **routing_metrics(loads)})
     return records
-
 
 def verify_artifacts(artifacts: Path) -> list[str]:
     """Return post-condition errors for the MoE/Latent/overhead evidence files."""
@@ -393,9 +456,8 @@ def verify_artifacts(artifacts: Path) -> list[str]:
 
     return errors
 
-
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the E3 admission Smoke package")
+    parser = argparse.ArgumentParser(description="Run the E3 P0 smoke package")
     parser.add_argument("--config", default=str(PACKAGE_ROOT / "configs" / "e3_smoke.yaml"))
     parser.add_argument("--baseline-root", default=None, help="Override the deployed YOLO-Master checkout path")
     args = parser.parse_args()
@@ -410,15 +472,14 @@ def main() -> int:
     artifacts = PACKAGE_ROOT / "artifacts" / "smoke" / run_id
     artifacts.mkdir(parents=True, exist_ok=True)
     logger = setup_logging(artifacts)
-    logger.info("E3 admission Smoke starting. baseline_root=%s", baseline_root)
+    logger.info("E3 P0 smoke starting. run_id=%s baseline_root=%s", run_id, baseline_root)
 
     environment = collect_environment()
     with (artifacts / "environment.json").open("w", encoding="utf-8") as stream:
         json.dump(environment, stream, ensure_ascii=False, indent=2)
 
     summary: dict[str, Any] = {
-        "status": "PASS",
-        "scope": "E3 8.25 admission Smoke; MoT/MoE/Latent families; not P0",
+        "scope": "E3 P0 smoke; MoT/MoE/Latent unified v1 capture + overhead",
         "run_id": run_id,
         "schema_version": config.get("schema_version"),
         "official_base_ref": config.get("official_base_ref"),
@@ -426,15 +487,31 @@ def main() -> int:
         "environment": environment,
     }
 
+    records: list[Any] = []
     try:
-        summary["mot"] = run_mot(config, artifacts, logger)
-        summary["moe"] = run_moe(config, artifacts, logger)
-        summary["latent"] = run_latent(config, artifacts, logger)
+        mot_result = run_mot(config, artifacts, logger, run_id=run_id)
+        summary["mot"] = mot_result
+        records.extend(mot_result.get("records") or [])
+        moe_result = run_moe(config, artifacts, logger, run_id=run_id)
+        summary["moe"] = moe_result
+        records.extend(moe_result.get("records") or [])
+        latent_result = run_latent(config, artifacts, logger, run_id=run_id)
+        summary["latent"] = latent_result
+        records.extend(latent_result.get("records") or [])
         summary["overhead"] = run_overhead(config, artifacts, logger)
     except Exception as exc:  # noqa: BLE001
         logger.error("Smoke step failed: %s", exc)
         summary["status"] = "FAIL"
         summary["error"] = str(exc)
+
+    routing_path = artifacts / "routing_records.jsonl"
+    if records:
+        from scripts.routing_capture import write_records
+
+        written = write_records(records, routing_path)
+        logger.info("routing_records.jsonl written: %d records -> %s", written, routing_path)
+    else:
+        logger.warning("no routing records collected; routing_records.jsonl not written")
 
     if summary["status"] == "PASS":
         failures: list[str] = []
@@ -472,7 +549,6 @@ def main() -> int:
     logger.info("result=%s", summary["status"])
     print(f"result={summary['status']}")
     return 0 if summary["status"] == "PASS" else 1
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
