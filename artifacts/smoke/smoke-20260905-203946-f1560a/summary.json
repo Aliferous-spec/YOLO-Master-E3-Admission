@@ -1,0 +1,49 @@
+{
+  "scope": "E3 P0 smoke; MoT/MoE/Latent unified v1 capture + overhead; isolated steps",
+  "run_id": "smoke-20260905-203946-f1560a",
+  "schema_version": "e3-routing-smoke/v0.1-candidate",
+  "official_base_ref": "3eb6cd914b651a06e2cd08ea87d12c28cab95502",
+  "baseline_root": "D:\\YOLO-Master",
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "python_executable": "<baseline-python>",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101",
+    "cwd": "<baseline-root>",
+    "captured_at": "2026-09-05T20:39:47+08:00"
+  },
+  "status": "PASS",
+  "steps": {
+    "mot": {
+      "status": "PASS",
+      "started_at": "2026-09-05T20:39:47+08:00",
+      "finished_at": "2026-09-05T20:39:54+08:00",
+      "records": 9
+    },
+    "moe": {
+      "status": "PASS",
+      "started_at": "2026-09-05T20:39:54+08:00",
+      "finished_at": "2026-09-05T20:39:59+08:00",
+      "records": 3
+    },
+    "latent": {
+      "status": "PASS",
+      "started_at": "2026-09-05T20:39:59+08:00",
+      "finished_at": "2026-09-05T20:40:00+08:00",
+      "records": 3
+    },
+    "overhead": {
+      "status": "PASS",
+      "started_at": "2026-09-05T20:40:00+08:00",
+      "finished_at": "2026-09-05T20:40:38+08:00"
+    }
+  },
+  "started_at": "2026-09-05T20:39:47+08:00",
+  "finished_at": "2026-09-05T20:40:38+08:00",
+  "validation": {
+    "errors": [],
+    "mot_records": 24,
+    "mot": "see CSV artifacts"
+  }
+}

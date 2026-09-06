@@ -1,0 +1,99 @@
+2026-09-05 20:45:46,295 [INFO] E3 P0 smoke starting. run_id=smoke-20260905-204546-6c7389 baseline_root=D:\YOLO-Master
+2026-09-05 20:45:47,542 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-09-05 20:45:54,457 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-09-05 20:45:56,100 [INFO] MoT routing records: 9
+2026-09-05 20:45:56,123 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-09-05 20:46:04,165 [INFO] MoE usage_stats: {
+  "model.5.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.4999989867210388,
+      "avg_weight": 0.4999989867210388
+    },
+    "1": {
+      "hits": 5.0,
+      "weighted_sum": 2.5532347559928894,
+      "avg_weight": 0.5106469511985778
+    },
+    "2": {
+      "hits": 4.0,
+      "weighted_sum": 1.946756362915039,
+      "avg_weight": 0.48668909072875977
+    }
+  },
+  "model.8.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "4": {
+      "hits": 4.0,
+      "weighted_sum": 1.9953402876853943,
+      "avg_weight": 0.49883507192134857
+    },
+    "6": {
+      "hits": 4.0,
+      "weighted_sum": 2.004644274711609,
+      "avg_weight": 0.5011610686779022
+    }
+  },
+  "model.11.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "1": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "6": {
+      "hits": 2.0,
+      "weighted_sum": 0.9949783980846405,
+      "avg_weight": 0.49748919904232025
+    },
+    "7": {
+      "hits": 4.0,
+      "weighted_sum": 2.051091969013214,
+      "avg_weight": 0.5127729922533035
+    },
+    "5": {
+      "hits": 2.0,
+      "weighted_sum": 0.9539043307304382,
+      "avg_weight": 0.4769521653652191
+    }
+  }
+}
+2026-09-05 20:46:04,407 [INFO] MoE routing records: 3
+2026-09-05 20:46:04,408 [INFO] Latent: model=ultralytics/cfg/models/26/yolo26-master-latent-n.yaml size=640
+2026-09-05 20:46:05,611 [INFO] Latent routing records: 3
+2026-09-05 20:46:05,619 [INFO] Latent legacy keys records: 3
+2026-09-05 20:46:05,624 [INFO] Overhead: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
+2026-09-05 20:46:40,891 [INFO] WARNING no model scale passed. Assuming scale='n'.
+Module Name                                        | Type                           | Status
+------------------------------------------------------------------------------------------
+model.5.routing                                    | DualStreamGateRouter           |  Hooked
+model.8.routing                                    | DualStreamGateRouter           |  Hooked
+model.11.routing                                   | DualStreamGateRouter           |  Hooked
+
+ Successfully hooked 3 router module(s)
+------------------------------------------------------------------------------------------
+without hook: 14.602s (292.0 ms/forward)
+with hook:    17.778s (355.6 ms/forward)
+overhead:     21.75% (target < 10%)
+
+2026-09-05 20:46:40,893 [INFO] overhead_percent=21.75
+2026-09-05 20:46:40,896 [INFO] routing_records.jsonl written: 15 records -> C:\tmp\e3-package\artifacts\smoke\smoke-20260905-204546-6c7389\routing_records.jsonl
+2026-09-05 20:46:40,905 [INFO] result=PASS

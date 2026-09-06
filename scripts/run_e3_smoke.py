@@ -284,7 +284,10 @@ def run_mot(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, 
     if output_dir.is_dir():
         for pattern in ("*.csv", "*.png", "*.txt"):
             for file in sorted(output_dir.glob(pattern)):
-                file.unlink()
+                try:
+                    file.unlink()
+                except OSError as exc:
+                    logger.warning("MoT stale-output cleanup skipped %s: %s", file, exc)
     command = [sys.executable, str(Path(mot["script"])), *[str(a) for a in mot.get("args", [])]]
     logger.info("MoT: %s", " ".join(command))
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)

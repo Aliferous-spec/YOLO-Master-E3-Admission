@@ -59,3 +59,9 @@ hook 采集不替换模型输出；所有快照先 detach 再落盘，避免日�
 
 - `mot_expert_heatmap_top1_share.png`：4 场景 × 3 专家的 `top1_share` 热力图，逐格显示占比。
 - 随机初始化模型在全部 4 类合成场景下 `LocalConvTransformer` 专家 `top1_share` 恒为 1.00（专家坍塌），这是训练前基线的真实特征，不是脚本 bug；后续需在真实训练 checkpoint 上复测。
+
+## 7. 已知耦合（known coupling）
+
+- **MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`**：上游 MoE router 默认按 `MOE_SNAPSHOT_INTERVAL` 间隔才刷新 `last_routing_snapshot`；为在验收所用的真实 forward 上拿到快照，采集代码对 MoE 模块直接设置上游私有属性 `_moe_force_snapshot = True`（`scripts/run_e3_smoke.py` 的 `_capture_model_records(force_moe_snapshot=True)` 与 `run_moe()` 各设置一次）。这是对上游未公开接口的实现耦合；本仓库不新增接口、不封装新功能，当前保留该机制并仅在此记录依赖。
+- 升级/切换 YOLO-Master 基线版本时需回归验证：若上游改名或删除 `_moe_force_snapshot`，MoE 快照采集会静默回退为按间隔刷新或不再产出，导致 MoE v1 记录缺失（现有失败隔离会把该 step 标记 FAIL 并保留日志）。
+- 另见：`docs/requirements.md` §5 已知限制、README「版本与边界」。

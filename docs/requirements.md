@@ -47,8 +47,10 @@ E3 的目标是给 YOLO-Master 的路由机制做一套可审计的观测链路�
 
 - 随机初始化模型的坍塌现象（MoT `LocalConvTransformer` 恒占 100%）是训练前基线特征，后续要在真实 checkpoint 上复测。
 - 三族字段粒度差异大，统一 schema 需要带 `routing_paradigm` 标记的父结构，不能简单拉平（见设计文档）。
+- 实现耦合（known coupling）：MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`（`scripts/run_e3_smoke.py`）；当前保留该机制，仅记录依赖，详见 `docs/smoke-design-and-schema.md` §7。
 - 后续按时间线推进：锁题 → 最小闭环 → 消融 → 中期演示 → 冻结可复现包 → 答辩。
 
 ## 6. 变更记录
 
 - 2026-08-25：初版，完成三族 Smoke、开销实测与证据打包。
+- 2026-09-06：P0 evidence closure——补充 `_moe_force_snapshot` known coupling 记录（未改动采集实现）。

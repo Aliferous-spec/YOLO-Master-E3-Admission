@@ -1,17 +1,21 @@
-schema_version: e3-routing/v1
+schema_version: e3-routing-smoke/v0.1-candidate
+run_id: admission-20260825
 seed: 0
 device: cpu
 families:
-  - mot
-  - moe
-  - latent
+- mot
+- moe
+- latent
 baseline_root: ../YOLO-Master
-# Python interpreter of the deployed baseline environment. Override with the
-# BASELINE_PY environment variable when the venv is not inside baseline_root.
 python: .venv/Scripts/python.exe
 mot:
   script: scripts/diagnose_mot_routing.py
-  args: [--synthetic, --device, cpu, --nc, "80"]
+  args:
+  - --synthetic
+  - --device
+  - cpu
+  - --nc
+  - '80'
   output_dir: runs/mot_ablation/routing
   model_config: ultralytics/cfg/models/master/v0_10/det/yolo-master-mot-n.yaml
 moe:
@@ -29,7 +33,6 @@ overhead:
   warmup: 5
   size: 640
 official_base_ref: 3eb6cd914b651a06e2cd08ea87d12c28cab95502
-notes: >-
-  E3 8.25 admission Smoke: MoT/MoE/Latent three-family routing smoke on the
-  deployed YOLO-Master baseline, plus a measured hook overhead figure. This is
-  an admission Smoke package, not a frozen P0 schema.
+notes: 'E3 8.25 admission Smoke: MoT/MoE/Latent three-family routing smoke on the
+  deployed YOLO-Master baseline, plus a measured hook overhead figure. This is an
+  admission Smoke package, not a frozen P0 schema.'
