@@ -2,7 +2,7 @@
 
 Owner：刘欣燃（GitHub：`Aliferous-spec`）
 
-状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；P1 尚未开始。
+状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B（逐样本开销测量）尚未开始。
 
 本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`，没有提交上游 PR。
 
@@ -57,6 +57,15 @@ run_tests.cmd
 - `routing_records.jsonl`：15 行 v1 记录（行级 `schema_version == "e3-routing/v1"`），MoT 9 + MoE 3 + Latent 3，均为真实 forward 后自动发现并采集（见 p0-acceptance §2.4/§2.5）。
 - 开销（验收跑）：`21.75%`（同日首跑 `-9.44%`，hook 开关时间差波动）；P0 只验证带符号解析与有限值，不做 `<10%` 阈值判定（见 p0-acceptance §4）。
 
+## P1-A 逐样本采集 Closure（2026-09-07）
+
+- Closure 记录：`docs/p1-a-closure.md`；正式 run_id：`smoke-20260907-002319-d05c10`；产物目录：`artifacts/smoke/smoke-20260907-002319-d05c10/`（14 个文件）。
+- P0 regression：无。P0 四 step（mot/moe/latent/overhead）均 PASS；canonical `routing_records.jsonl` 15 行、全 `step=None`，语义与 P0 一致。
+- P1-A sample：`sample_routing_records.jsonl` 51 行（mot 4x9 + moe 4x3 + latent 1x3），全行 `e3-routing/v1`、run_id 一致、per-family step 连续、主键无重复、canonical 未混入 sample rows。
+- manifest/verify：manifest 13 项 SHA-256 13/13 一致；`--verify-artifacts` → `result=PASS`（exit 0）。
+- 质量门：pytest `68 passed`；ruff（本次涉及文件）`All checks passed!`。
+- P1-B（逐样本开销测量）：**尚未开始**；本 closure 未做 overhead 实验。
+
 ## 版本与边界
 
 - 官方锁定基线（`configs/e3_smoke.yaml` 的 `official_base_ref` 记录值）：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（2026-08-23，main 分支）。
@@ -65,5 +74,5 @@ run_tests.cmd
   - 运行时 `ultralytics` 包来自 venv editable install：`D:\Claude_Workspace\projects\YOLO-Master-review`，HEAD `d604c4b`（工作树含未提交改动）；
   - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：`D:\YOLO-Master`，HEAD `aa5d2e2`；
   - 原因：验收在已部署的本地 checkout 上执行，review 与部署目录相对官方锁定 ref 各有演进与本地改动；该差异按环境实况记录（同 `docs/p0-acceptance.md` §4），不代表三处代码等价。
-- 已覆盖 MoT / MoE / Latent 三族；P1、实时面板、token 原图热图与正式统一 schema 冻结属于后续阶段。
+- 已覆盖 MoT / MoE / Latent 三族；P1-B（逐样本开销测量）、实时面板、token 原图热图与正式统一 schema 冻结属于后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`）。
 - 已知实现耦合：MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`，详见 `docs/smoke-design-and-schema.md` §7。

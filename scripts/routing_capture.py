@@ -22,6 +22,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+import torch
 from torch import nn
 from ultralytics.nn.modules.routing_protocol import is_routed_module
 
@@ -150,12 +151,103 @@ def capture_to_file(
     return write_records(records, output)
 
 
+def snapshot_bn_running_state(model: nn.Module) -> dict[str, dict[str, torch.Tensor]]:
+    """Snapshot BatchNorm running statistics for every train-mode BN module.
+
+    P1-A MoE continuous train-mode isolation: records the initial
+    ``running_mean`` / ``running_var`` / ``num_batches_tracked`` buffers of every
+    ``nn.modules.batchnorm._BatchNorm`` module with ``track_running_stats=True``,
+    keyed by the ``named_modules`` path.  Only buffers that exist are stored, so
+    the same helper works for modules with ``momentum=None``.
+    """
+    snapshot: dict[str, dict[str, torch.Tensor]] = {}
+    for name, module in model.named_modules():
+        if not isinstance(module, nn.modules.batchnorm._BatchNorm) or not module.track_running_stats:
+            continue
+        with torch.no_grad():
+            state: dict[str, torch.Tensor] = {}
+            for key in ("running_mean", "running_var", "num_batches_tracked"):
+                buffer = getattr(module, key, None)
+                if buffer is not None:
+                    state[key] = buffer.detach().clone()
+        snapshot[name] = state
+    return snapshot
+
+
+def restore_bn_running_state(model: nn.Module, snapshot: Mapping[str, Mapping[str, torch.Tensor]]) -> None:
+    """In-place restore the BatchNorm running statistics recorded earlier.
+
+    Raises when a snapshot module is gone or no longer a tracked BatchNorm, so a
+    stale snapshot can never silently restore the wrong buffers.
+    """
+    if not isinstance(snapshot, Mapping):
+        raise TypeError(f"BN snapshot must be a mapping, got {type(snapshot).__name__}")
+    for name, state in snapshot.items():
+        if not isinstance(state, Mapping):
+            raise TypeError(f"BN snapshot entry for {name!r} must be a mapping, got {type(state).__name__}")
+        try:
+            module = model.get_submodule(str(name))
+        except AttributeError as exc:
+            raise ValueError(f"cannot restore BN state: module {name!r} no longer exists") from exc
+        if not isinstance(module, nn.modules.batchnorm._BatchNorm) or not module.track_running_stats:
+            raise ValueError(
+                f"cannot restore BN state: module {name!r} is no longer a track_running_stats BatchNorm "
+                f"({module.__class__.__name__})"
+            )
+        with torch.no_grad():
+            for key, value in state.items():
+                if key not in ("running_mean", "running_var", "num_batches_tracked"):
+                    raise ValueError(f"cannot restore BN state: unsupported buffer {name!r}.{key}")
+                target = getattr(module, key, None)
+                if target is None:
+                    raise ValueError(f"cannot restore BN state: module {name!r} has no {key} buffer")
+                target.copy_(value)
+
+
+def capture_sample_records(
+    model: nn.Module,
+    samples: Sequence[Any],
+    *,
+    run_id: str,
+    captured_at: str,
+    training: bool | None = None,
+    before_each: Callable[[nn.Module, int], Any] | None = None,
+) -> list[RoutingRecord]:
+    """Capture one v1 record per discovered module after every sample forward.
+
+    P1-A per-sample capture loop: ``samples`` holds the inputs fed to ``model``
+    one at a time (one MoT scene / MoE val image / Latent image per element).
+    ``step`` is the 0-based sample ordinal inside the family.  ``before_each``
+    runs right before each sample forward (used for the MoE train-mode BN state
+    restore).  Rows are returned for the caller to persist to the dedicated
+    sample JSONL path; this helper never writes by itself.
+    """
+    records: list[RoutingRecord] = []
+    for step, sample in enumerate(samples):
+        if before_each is not None:
+            before_each(model, step)
+        records.extend(
+            capture_records(
+                model,
+                run_id=run_id,
+                captured_at=captured_at,
+                forward=lambda root, sample=sample: root(sample),
+                step=step,
+                training=training,
+            )
+        )
+    return records
+
+
 __all__ = [
     "FAMILY_ADAPTERS",
     "SUPPORTED_FAMILIES",
     "capture_records",
+    "capture_sample_records",
     "capture_to_file",
     "discover_routed_modules",
     "module_family",
+    "restore_bn_running_state",
+    "snapshot_bn_running_state",
     "write_records",
 ]

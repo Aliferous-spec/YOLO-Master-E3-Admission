@@ -407,6 +407,202 @@ def run_latent(config: dict[str, Any], artifacts: Path, logger: logging.Logger, 
     return {"records": records, "module_count": len(records)}
 
 
+# ---------------------------------------------------------------------------
+# P1-A sample-level capture (per-sample snapshots -> sample_routing_records.jsonl)
+# ---------------------------------------------------------------------------
+
+
+def _sample_records_path(artifacts: Path) -> Path:
+    """Return the dedicated P1-A sample JSONL path inside an artifacts dir."""
+    return Path(artifacts) / "sample_routing_records.jsonl"
+
+
+def _set_moe_snapshot_force(model: Any) -> int:
+    """Force every routed MoE module to refresh its snapshot each forward."""
+    forced = 0
+    for _, mod in model.named_modules():
+        if "moe" in mod.__class__.__module__.lower() and hasattr(mod, "last_routing_snapshot"):
+            mod._moe_force_snapshot = True
+            forced += 1
+    return forced
+
+
+def _load_baseline_module(baseline_root: Path, script_rel: str) -> Any:
+    """Import a YOLO-Master script module by file path (avoids package clashes).
+
+    The deployed baseline ships its own ``scripts`` package, which would shadow
+    this package, so the file is loaded under a unique module name.
+    """
+    import importlib.util
+
+    script_path = (baseline_root / script_rel).resolve()
+    if not script_path.is_file():
+        raise FileNotFoundError(f"baseline script not found: {script_path}")
+    module_name = f"_e3_p1_baseline_{script_path.stem}"
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load baseline script module from {script_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _mot_sample_tensors(config: Mapping[str, Any], baseline_root: Path, size: int) -> list[Any]:
+    """Return MoT sample tensors from the upstream synthetic scene generator.
+
+    Upstream order (fixed): sparse_small / dense_small / large_regular /
+    irregular_occluded, matching the P0 CSV diagnostic input set.
+    """
+    mot = config["mot"]
+    module = _load_baseline_module(baseline_root, str(mot["script"]))
+    scenes = module.synthetic_scenes(int(size), 1)
+    return [tensor for _name, tensor, _image_ids in scenes]
+
+
+def _moe_val_sample_tensors(yolo: Any, config: Mapping[str, Any]) -> list[Any]:
+    """Return the coco8 val image tensors exactly as the YOLO val pipeline feeds them.
+
+    Reuses the upstream detection validator dataset + preprocessing (letterbox,
+    rect batch shape, /255) so the samples are the same inputs the P0 MoE
+    ``ExpertUsageTracker`` evidence sees; external-id association is ordinal.
+    """
+    import torch
+    from ultralytics.data.utils import check_det_dataset
+
+    moe = config["moe"]
+    device = str(config.get("device", "cpu"))
+    args = {
+        **yolo.overrides,
+        "rect": True,
+        "data": moe.get("dataset", "coco8.yaml"),
+        "split": moe.get("dataset_split", "val"),
+        "batch": int(moe.get("batch", 1)),
+        "device": device,
+        "verbose": False,
+        "mode": "val",
+    }
+    validator = yolo._smart_load("validator")(args=args, _callbacks={})
+    validator.training = False
+    validator.args.workers = 0
+    validator.args.rect = True
+    validator.data = check_det_dataset(validator.args.data, split=validator.args.split)
+    validator.stride = int(yolo.model.stride.max().item())
+    validator.device = torch.device(device)
+    loader = validator.get_dataloader(validator.data.get(validator.args.split), validator.args.batch)
+    return [validator.preprocess(batch)["img"] for batch in loader]
+
+
+def _capture_mot_sample_records(config: Mapping[str, Any], baseline_root: Path, run_id: str) -> list[Any]:
+    """Run one eval forward per MoT synthetic scene; return module-level rows."""
+    from ultralytics import YOLO
+
+    from scripts.routing_capture import capture_sample_records
+
+    mot = config["mot"]
+    size = int(mot.get("image_size", 640))
+    tensors = _mot_sample_tensors(config, baseline_root, size)
+    if len(tensors) != 4:
+        raise RuntimeError(f"MoT sample source must yield 4 synthetic scenes, got {len(tensors)}")
+    model = YOLO(mot["model_config"]).model.eval()
+    records = capture_sample_records(
+        model, tensors, run_id=run_id, captured_at=_now_iso(), training=False
+    )
+    if not records:
+        raise RuntimeError("MoT sample capture produced no routing records")
+    return records
+
+
+def _capture_moe_sample_records(config: Mapping[str, Any], run_id: str) -> list[Any]:
+    """Run one train-mode forward per coco8 val image with BN state isolation."""
+    from ultralytics import YOLO
+
+    from scripts.routing_capture import (
+        capture_sample_records,
+        restore_bn_running_state,
+        snapshot_bn_running_state,
+    )
+
+    moe = config["moe"]
+    yolo = YOLO(moe["model_config"])
+    model = yolo.model.train()
+    if _set_moe_snapshot_force(model) == 0:
+        raise RuntimeError("MoE sample capture: no routed MoE modules to force snapshots")
+    tensors = _moe_val_sample_tensors(yolo, config)
+    if len(tensors) != 4:
+        raise RuntimeError(f"MoE sample source must yield 4 coco8 val images, got {len(tensors)}")
+    bn_snapshot = snapshot_bn_running_state(model)
+    if not bn_snapshot:
+        raise RuntimeError("MoE sample capture: no track_running_stats BatchNorm found to isolate")
+
+    def _restore_bn(root: Any, step: int) -> None:
+        restore_bn_running_state(root, bn_snapshot)
+
+    records = capture_sample_records(
+        model, tensors, run_id=run_id, captured_at=_now_iso(), training=True, before_each=_restore_bn
+    )
+    if not records:
+        raise RuntimeError("MoE sample capture produced no routing records")
+    return records
+
+
+def _capture_latent_sample_records(config: Mapping[str, Any], run_id: str) -> list[Any]:
+    """Run one eval forward on the single random latent input; return rows."""
+    import torch
+    from ultralytics import YOLO
+
+    from scripts.routing_capture import capture_sample_records
+
+    latent = config["latent"]
+    size = int(latent.get("image_size", 640))
+    model = YOLO(latent["model_config"]).model.eval()
+    records = capture_sample_records(
+        model, [torch.randn(1, 3, size, size)], run_id=run_id, captured_at=_now_iso(), training=False
+    )
+    if not records:
+        raise RuntimeError("Latent sample capture produced no routing records")
+    return records
+
+
+def run_sample_capture(config: Mapping[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str, baseline_root: Path) -> dict[str, Any]:
+    """P1-A step: per-sample snapshots into ``sample_routing_records.jsonl``.
+
+    The step writes its own dedicated JSONL (``write_records`` on the sample
+    path) and returns no ``records``, so ``execute_smoke_steps()`` never merges
+    sample rows into the canonical ``routing_records.jsonl``.
+    """
+    from scripts.routing_capture import write_records
+
+    captures = (
+        ("mot", lambda: _capture_mot_sample_records(config, baseline_root, run_id)),
+        ("moe", lambda: _capture_moe_sample_records(config, run_id)),
+        ("latent", lambda: _capture_latent_sample_records(config, run_id)),
+    )
+    family_rows: list[Any] = []
+    details: dict[str, Any] = {}
+    for family, capture in captures:
+        records = capture()
+        family_rows.extend(records)
+        steps = sorted({record.step for record in records})
+        modules = {record.module.name for record in records}
+        details[family] = {"samples": len(steps), "modules": len(modules), "records": len(records)}
+        logger.info(
+            "P1-A sample capture %s: samples=%d modules=%d records=%d",
+            family,
+            len(steps),
+            len(modules),
+            len(records),
+        )
+    if not family_rows:
+        raise RuntimeError("P1-A sample capture produced no rows at all")
+    sample_path = _sample_records_path(artifacts)
+    written = write_records(family_rows, sample_path)
+    logger.info("P1-A sample rows written: %d -> %s", written, sample_path)
+    return {"sample_file": sample_path.name, "sample_records": written, "families": details}
+
+
 def parse_overhead_percent(text: str) -> float:
     """Parse ``overhead: 1.50%`` output, accepting optional +/- signs.
 
@@ -552,6 +748,62 @@ def verify_manifest(artifacts: Path) -> list[str]:
     return errors
 
 
+def verify_sample_records(sample_path: Path, *, run_id: str) -> list[str]:
+    """P1-A sample-file validation: all rows v1, run_id-consistent, continuous.
+
+    Returns a list of human-readable errors (empty list means valid).  Every
+    sample row must parse as ``e3-routing/v1`` with ``step`` an int >= 0; per
+    family the steps must be 0..S_f-1 with the same module set on every step,
+    and the ``(run_id, family, module.name, step)`` primary key must be unique.
+    """
+    from scripts.routing_record_writer import iter_records
+
+    errors: list[str] = []
+    sample_path = Path(sample_path)
+    if not sample_path.is_file():
+        return [f"sample routing records missing: {sample_path}"]
+    try:
+        rows = list(iter_records(sample_path))
+    except ValueError as exc:
+        return [f"sample routing records invalid: {exc}"]
+    if not rows:
+        return [f"sample routing records empty: {sample_path}"]
+
+    per_family: dict[str, dict[int, set[str]]] = {}
+    seen_keys: set[tuple[str, str, str, int]] = set()
+    for row in rows:
+        if row.run_id != run_id:
+            errors.append(f"sample row run_id mismatch: {row.run_id!r} != {run_id!r}")
+        if not isinstance(row.step, int) or row.step < 0:
+            errors.append(
+                f"sample row must have an int step >= 0: module={row.module.name!r} step={row.step!r}"
+            )
+            continue
+        key = (row.run_id, row.family, row.module.name, row.step)
+        if key in seen_keys:
+            errors.append(f"duplicate sample row key: {key}")
+        seen_keys.add(key)
+        per_family.setdefault(row.family, {}).setdefault(row.step, set()).add(row.module.name)
+
+    for family, step_modules in sorted(per_family.items()):
+        sample_count = max(step_modules) + 1
+        if set(step_modules) != set(range(sample_count)):
+            errors.append(f"family {family}: sample steps not continuous: {sorted(step_modules)}")
+            continue
+        module_sets = [step_modules[step] for step in range(sample_count)]
+        base = module_sets[0]
+        if any(modules != base for modules in module_sets[1:]):
+            errors.append(f"family {family}: routed module set differs across samples")
+            continue
+        actual = sum(len(modules) for modules in module_sets)
+        expected = sample_count * len(base)
+        if actual != expected:
+            errors.append(
+                f"family {family}: row count {actual} != samples {sample_count} x modules {len(base)}"
+            )
+    return errors
+
+
 def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
     """Read ``mot_routing_detailed.csv`` into per-decision validation records."""
     if not csv_path.is_file():
@@ -629,6 +881,9 @@ def verify_artifacts(artifacts: Path) -> list[str]:
 
 def verify_cli_artifacts(artifacts: Path) -> int:
     errors = verify_manifest(artifacts)
+    sample_path = Path(artifacts) / "sample_routing_records.jsonl"
+    if sample_path.is_file():
+        errors.extend(verify_sample_records(sample_path, run_id=artifacts.name))
     for error in errors:
         print(f"ERROR: {error}")
     if errors:
@@ -682,6 +937,9 @@ def main(argv: list[str] | None = None) -> int:
         "moe": lambda: run_moe(config, artifacts, logger, run_id=run_id),
         "latent": lambda: run_latent(config, artifacts, logger, run_id=run_id),
         "overhead": lambda: run_overhead(config, artifacts, logger),
+        "samples": lambda: run_sample_capture(
+            config, artifacts, logger, run_id=run_id, baseline_root=baseline_root
+        ),
     }
     step_summary, records = execute_smoke_steps(steps, logger)
     summary.update(step_summary)
@@ -701,6 +959,9 @@ def main(argv: list[str] | None = None) -> int:
             failures.extend(verify_artifacts(artifacts))
         except Exception as exc:  # noqa: BLE001
             failures.append(f"artifact validation failed: {exc}")
+        sample_path = artifacts / "sample_routing_records.jsonl"
+        if sample_path.is_file():
+            failures.extend(verify_sample_records(sample_path, run_id=run_id))
         mot_records: list[dict[str, Any]] = []
         try:
             mot_records = load_mot_records(artifacts / "mot_routing_detailed.csv")
