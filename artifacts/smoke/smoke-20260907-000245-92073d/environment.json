@@ -1,0 +1,9 @@
+{
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.9",
+  "python_executable": "<baseline-python>",
+  "torch": "2.13.0+cpu",
+  "ultralytics": "8.4.101",
+  "cwd": "<baseline-root>",
+  "captured_at": "2026-09-07T00:02:46+08:00"
+}

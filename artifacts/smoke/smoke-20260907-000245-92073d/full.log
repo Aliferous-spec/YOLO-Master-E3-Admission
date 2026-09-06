@@ -1,0 +1,103 @@
+2026-09-07 00:02:45,396 [INFO] E3 P0 smoke starting. run_id=smoke-20260907-000245-92073d baseline_root=D:\YOLO-Master
+2026-09-07 00:02:46,585 [INFO] MoT: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\diagnose_mot_routing.py --synthetic --device cpu --nc 80
+2026-09-07 00:02:53,464 [INFO] WARNING no model scale passed. Assuming scale='n'.
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_detailed.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_routing_scenarios.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_deformable_activation_check.csv
+[routing] wrote D:\YOLO-Master\runs\mot_ablation\routing\mot_expert_heatmap_top1_share.png
+
+2026-09-07 00:02:54,040 [INFO] MoT routing records: 9
+2026-09-07 00:02:54,041 [INFO] MoE: model=ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml dataset=coco8.yaml
+2026-09-07 00:02:57,007 [INFO] MoE usage_stats: {
+  "model.5.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.4999989867210388,
+      "avg_weight": 0.4999989867210388
+    },
+    "1": {
+      "hits": 5.0,
+      "weighted_sum": 2.501983195543289,
+      "avg_weight": 0.5003966391086578
+    },
+    "2": {
+      "hits": 4.0,
+      "weighted_sum": 1.9980080425739288,
+      "avg_weight": 0.4995020106434822
+    }
+  },
+  "model.8.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999797344207764,
+      "avg_weight": 0.49999797344207764
+    },
+    "1": {
+      "hits": 5.0,
+      "weighted_sum": 2.616711437702179,
+      "avg_weight": 0.5233422875404358
+    },
+    "5": {
+      "hits": 3.0,
+      "weighted_sum": 1.412560909986496,
+      "avg_weight": 0.47085363666216534
+    },
+    "2": {
+      "hits": 1.0,
+      "weighted_sum": 0.4707106649875641,
+      "avg_weight": 0.4707106649875641
+    }
+  },
+  "model.11.routing": {
+    "0": {
+      "hits": 1.0,
+      "weighted_sum": 0.49999600648880005,
+      "avg_weight": 0.49999600648880005
+    },
+    "1": {
+      "hits": 2.0,
+      "weighted_sum": 0.9968404173851013,
+      "avg_weight": 0.49842020869255066
+    },
+    "4": {
+      "hits": 3.0,
+      "weighted_sum": 1.4974850118160248,
+      "avg_weight": 0.4991616706053416
+    },
+    "7": {
+      "hits": 3.0,
+      "weighted_sum": 1.5185550153255463,
+      "avg_weight": 0.5061850051085154
+    },
+    "2": {
+      "hits": 1.0,
+      "weighted_sum": 0.487087607383728,
+      "avg_weight": 0.487087607383728
+    }
+  }
+}
+2026-09-07 00:02:57,091 [INFO] MoE routing records: 3
+2026-09-07 00:02:57,092 [INFO] Latent: model=ultralytics/cfg/models/26/yolo26-master-latent-n.yaml size=640
+2026-09-07 00:02:57,492 [INFO] Latent routing records: 3
+2026-09-07 00:02:57,495 [INFO] Latent legacy keys records: 3
+2026-09-07 00:02:57,496 [INFO] Overhead: C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts/measure_routing_hook_overhead.py --model ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml --iterations 50 --warmup 5 --size 640
+2026-09-07 00:03:13,872 [INFO] WARNING no model scale passed. Assuming scale='n'.
+Module Name                                        | Type                           | Status
+------------------------------------------------------------------------------------------
+model.5.routing                                    | DualStreamGateRouter           |  Hooked
+model.8.routing                                    | DualStreamGateRouter           |  Hooked
+model.11.routing                                   | DualStreamGateRouter           |  Hooked
+
+ Successfully hooked 3 router module(s)
+------------------------------------------------------------------------------------------
+without hook: 6.947s (138.9 ms/forward)
+with hook:    6.930s (138.6 ms/forward)
+overhead:     -0.24% (target < 10%)
+
+2026-09-07 00:03:13,873 [INFO] overhead_percent=-0.24
+2026-09-07 00:03:14,955 [INFO] P1-A sample capture mot: samples=4 modules=9 records=36
+2026-09-07 00:03:15,522 [INFO] P1-A sample capture moe: samples=4 modules=3 records=12
+2026-09-07 00:03:16,003 [INFO] P1-A sample capture latent: samples=1 modules=3 records=3
+2026-09-07 00:03:16,005 [INFO] P1-A sample rows written: 51 -> C:\tmp\e3-package\artifacts\smoke\smoke-20260907-000245-92073d\sample_routing_records.jsonl
+2026-09-07 00:03:16,006 [INFO] routing_records.jsonl written: 15 records -> C:\tmp\e3-package\artifacts\smoke\smoke-20260907-000245-92073d\routing_records.jsonl
+2026-09-07 00:03:16,011 [INFO] result=PASS
