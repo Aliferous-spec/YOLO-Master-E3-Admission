@@ -20,6 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.run_e3_smoke import (
+    apply_seed,
     build_manifest,
     execute_smoke_steps,
     generate_run_id,
@@ -255,3 +256,24 @@ def test_verify_cli_artifacts_applies_canonical_content_checks(
     assert verify_cli_artifacts(artifacts) == 1
     assert called == [artifacts]
     assert "overhead_percent missing or null" in capsys.readouterr().out
+
+# ---------------------------------------------------------------------------
+# S3: configured seed drives the randn input source (reproducibility)
+# ---------------------------------------------------------------------------
+
+def test_apply_seed_makes_same_seed_reproducible_and_different_seed_diverge() -> None:
+    """Config seed fixes torch.randn (Latent sample input) on the CPU path."""
+    import torch
+
+    apply_seed({"seed": 7})
+    first = torch.randn(1, 3, 8, 8)
+    apply_seed({"seed": 7})
+    again = torch.randn(1, 3, 8, 8)
+    apply_seed({"seed": 8})
+    other = torch.randn(1, 3, 8, 8)
+    assert torch.equal(first, again)
+    assert not torch.equal(first, other)
+
+
+def test_apply_seed_defaults_to_zero() -> None:
+    assert apply_seed({}) == 0

@@ -156,6 +156,19 @@ def load_config(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as stream:
         return yaml.safe_load(stream)
 
+def apply_seed(config: Mapping[str, Any]) -> int:
+    """Seed torch CPU RNG from ``config["seed"]`` before any model work.
+
+    The smoke synthetic inputs are drawn with ``torch.randn``; reseeding the
+    global generator at run start makes Latent (and other randn-driven)
+    sample-level captures reproducible for a given seed on the CPU path.
+    """
+    import torch
+
+    seed = int(config.get("seed", 0))
+    torch.manual_seed(seed)
+    return seed
+
 
 def resolve_baseline_root(config: dict[str, Any], cli_root: str | None) -> Path:
     if cli_root:
@@ -913,6 +926,7 @@ def main(argv: list[str] | None = None) -> int:
         return verify_cli_artifacts(Path(args.verify_artifacts))
 
     config = load_config(Path(args.config))
+    apply_seed(config)
     baseline_root = resolve_baseline_root(config, args.baseline_root)
     if not baseline_root.is_dir():
         raise SystemExit(f"baseline_root not found: {baseline_root}")
