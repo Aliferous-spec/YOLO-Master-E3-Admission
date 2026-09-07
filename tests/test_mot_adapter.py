@@ -177,3 +177,18 @@ def test_boundary_invalid_values_rejected() -> None:
     snapshot["expert_usage"] = [1.0, 1.0]
     with pytest.raises(ValueError, match="length"):
         _build(snapshot)
+
+# ---------------------------------------------------------------------------
+# S2: record-path metrics and validation-path metrics share one canonical source
+# ---------------------------------------------------------------------------
+
+def test_record_metrics_match_validation_metrics() -> None:
+    """S2: the adapter record and routing_metrics validation agree exactly."""
+    import scripts.run_e3_smoke as smoke
+
+    record = _build(_block_snapshot())
+    metrics = smoke.routing_metrics([float(item) for item in record.routing.expert_usage])
+    assert metrics["routing_entropy_nats"] == pytest.approx(record.routing.routing_entropy_nats, abs=1e-6)
+    assert metrics["routing_entropy_normalized"] == pytest.approx(record.routing.routing_entropy_normalized, abs=1e-6)
+    assert metrics["load_gini"] == pytest.approx(record.routing.load_gini, abs=1e-6)
+    assert metrics["dominant_expert_share"] == pytest.approx(record.routing.dominant_expert_share, abs=1e-6)

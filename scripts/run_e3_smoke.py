@@ -63,57 +63,34 @@ def _to_plain(value: Any) -> Any:
     return value
 
 
-def _shannon_entropy(probabilities: Any) -> float:
-    """Shannon entropy in nats over a non-negative probability vector."""
-    import numpy as np
-
-    positive = probabilities[probabilities > 0.0]
-    if positive.size == 0:
-        return 0.0
-    return float(-(positive * np.log(positive)).sum())
-
-
-def _gini_of_loads(loads: Any) -> float:
-    """Gini coefficient over a non-negative load vector (0 = perfectly even)."""
-    import numpy as np
-
-    total = float(loads.sum())
-    if loads.size == 0 or total <= 0.0:
-        return 0.0
-    ordered = np.sort(loads)
-    ranks = np.arange(1, ordered.size + 1, dtype=np.float64)
-    numerator = 2.0 * float(np.sum(ranks * ordered))
-    denominator = float(ordered.size * total)
-    coefficient = numerator / denominator - (ordered.size + 1.0) / ordered.size
-    return float(np.clip(coefficient, 0.0, 1.0))
-
-
 def routing_metrics(expert_usage: Any) -> dict[str, Any]:
     """Summarize expert usage as normalized shares plus concentration metrics.
 
-    Formulas follow the standard definitions: Shannon entropy H = -sum(p ln p),
-    normalized entropy H / ln(E), and the Gini coefficient of the load vector.
+    Entropy / Gini come from the same canonical upstream helper the adapters
+    use (``ultralytics.nn.modules.routing_protocol.global_routing_metrics``),
+    so record and validation metrics share one source and cannot drift; only
+    the sum-to-one share mapping is applied here.
     """
-    import numpy as np
+    from ultralytics.nn.modules.routing_protocol import global_routing_metrics
 
-    loads = np.asarray(_to_plain(expert_usage), dtype=np.float64).reshape(-1)
-    loads = np.where(np.isfinite(loads), loads, 0.0)
-    loads = np.maximum(loads, 0.0)
+    raw = _to_plain(expert_usage)
+    loads = [] if raw is None else [float(item) for item in raw]
 
-    total_load = float(loads.sum())
-    shares = loads / total_load if total_load > 0.0 else np.zeros_like(loads)
+    upstream = global_routing_metrics({"expert_usage": loads})
+    entropy_nats = float(upstream["global_entropy"])
+    denom = math.log(len(loads)) if len(loads) > 1 else 0.0
+    normalized = entropy_nats / denom if denom > 0.0 else 0.0
 
-    entropy = _shannon_entropy(shares)
-    denom = math.log(shares.size) if shares.size > 1 else 0.0
-    normalized = entropy / denom if denom > 0.0 else 0.0
+    total = sum(loads)
+    shares = [item / total for item in loads] if total > 0.0 else [0.0] * len(loads)
 
     return {
-        "expert_load": shares.tolist(),
-        "expert_load_sum": float(shares.sum()),
-        "routing_entropy_nats": entropy,
-        "routing_entropy_normalized": normalized,
-        "load_gini": _gini_of_loads(loads),
-        "dominant_expert_share": float(shares.max()) if shares.size else 0.0,
+        "expert_load": shares,
+        "expert_load_sum": float(sum(shares)),
+        "routing_entropy_nats": entropy_nats,
+        "routing_entropy_normalized": min(max(normalized, 0.0), 1.0),
+        "load_gini": float(upstream["global_gini"]),
+        "dominant_expert_share": float(max(shares)) if shares else 0.0,
     }
 
 
