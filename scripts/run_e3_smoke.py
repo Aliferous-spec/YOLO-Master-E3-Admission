@@ -880,7 +880,12 @@ def verify_artifacts(artifacts: Path) -> list[str]:
 
 
 def verify_cli_artifacts(artifacts: Path) -> int:
-    errors = verify_manifest(artifacts)
+    errors: list[str] = []
+    try:
+        errors.extend(verify_artifacts(artifacts))
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"artifact validation failed: {exc}")
+    errors.extend(verify_manifest(artifacts))
     sample_path = Path(artifacts) / "sample_routing_records.jsonl"
     if sample_path.is_file():
         errors.extend(verify_sample_records(sample_path, run_id=artifacts.name))
@@ -900,7 +905,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-id", default=None, help="Explicit run id; defaults to a fresh unique id per run")
     parser.add_argument(
         "--verify-artifacts", default=None, metavar="DIR",
-        help="Verify an artifacts directory (manifest + SHA-256 + run_id) and exit",
+        help="Verify an artifacts directory (manifest + SHA-256 + run_id + evidence content) and exit",
     )
     args = parser.parse_args(argv)
 

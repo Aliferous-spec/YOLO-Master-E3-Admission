@@ -27,6 +27,7 @@ from scripts.run_e3_smoke import (
     resolve_run_id,
     setup_logging,
     smoke_artifacts_dir,
+    verify_cli_artifacts,
     verify_manifest,
 )
 
@@ -211,3 +212,46 @@ def test_verify_manifest_reports_run_id_mismatch(tmp_path: Path) -> None:
     (artifacts / "manifest.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
     errors = verify_manifest(artifacts)
     assert any("run_id" in error and "run-dir" in error for error in errors)
+
+# ---------------------------------------------------------------------------
+# S4: CLI --verify-artifacts applies the canonical verify_artifacts checks
+# ---------------------------------------------------------------------------
+
+def _make_full_run_artifacts(root: Path, run_id: str) -> Path:
+    artifacts = root / run_id
+    artifacts.mkdir(parents=True)
+    (artifacts / "summary.json").write_text(json.dumps({"run_id": run_id}), encoding="utf-8")
+    (artifacts / "evidence.txt").write_text("hello", encoding="utf-8")
+    (artifacts / "moe_usage_stats.json").write_text(
+        json.dumps({"layers": {"0": 1}}), encoding="utf-8"
+    )
+    (artifacts / "latent_snapshot.jsonl").write_text('{"record": 1}\n', encoding="utf-8")
+    (artifacts / "overhead_result.json").write_text(
+        json.dumps({"overhead_percent": 1.5}), encoding="utf-8"
+    )
+    manifest = build_manifest(artifacts)
+    (artifacts / "manifest.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return artifacts
+
+
+def test_verify_cli_artifacts_passes_a_full_run(tmp_path: Path) -> None:
+    artifacts = _make_full_run_artifacts(tmp_path, "run-full")
+    assert verify_cli_artifacts(artifacts) == 0
+
+
+def test_verify_cli_artifacts_applies_canonical_content_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import scripts.run_e3_smoke as smoke
+
+    artifacts = _make_run_artifacts(tmp_path, "run-cli")
+    called: list[Path] = []
+
+    def fake_verify(path: Path) -> list[str]:
+        called.append(path)
+        return ["overhead_percent missing or null"]
+
+    monkeypatch.setattr(smoke, "verify_artifacts", fake_verify)
+    assert verify_cli_artifacts(artifacts) == 1
+    assert called == [artifacts]
+    assert "overhead_percent missing or null" in capsys.readouterr().out
