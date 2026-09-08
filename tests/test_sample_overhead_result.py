@@ -11,26 +11,35 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.measure_sample_capture_overhead import (
-    _summarize,
+    _bootstrap_ci_mean,
+    _distribution,
+    _percentile_nearest_rank,
     compose_payload,
 )
 from scripts.run_e3_smoke import verify_sample_overhead_result
 
+_PAIR_COUNT = 120
+
 
 def _arm_pairs() -> list[tuple[float, float]]:
-    return [(10.0, 12.0), (10.0, 11.0), (10.0, 13.0)]
+    """Deterministic sub-second timings around a ~5% ON overhead with noise."""
+    pairs: list[tuple[float, float]] = []
+    for index in range(_PAIR_COUNT):
+        off = 0.2 + 0.001 * (index % 7)
+        on = off * 1.05 + 0.0005 * (index % 5)
+        pairs.append((off, on))
+    return pairs
 
 
 def _payload(**overrides: object) -> dict:
     payload = compose_payload(
         run_id="run-p1b",
-        captured_at="2026-09-08T00:00:00+08:00",
-        started_at="2026-09-08T00:00:00+08:00",
-        finished_at="2026-09-08T00:00:30+08:00",
+        captured_at="2026-09-09T00:00:00+08:00",
+        started_at="2026-09-09T00:00:00+08:00",
+        finished_at="2026-09-09T00:00:30+08:00",
         model_config="ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml",
-        iterations=50,
+        pairs=_PAIR_COUNT,
         warmup=5,
-        repeats=3,
         size=640,
         arm_pairs=_arm_pairs(),
         environment={"python": "3.11.9", "torch": "2.13.0+cpu", "ultralytics": "8.4.101", "platform": "test"},
@@ -39,41 +48,76 @@ def _payload(**overrides: object) -> dict:
     return payload
 
 
-def test_summarize_reports_mean_std_min_max_n() -> None:
-    stats = _summarize([10.0, 20.0, 30.0])
-    assert stats["mean"] == pytest.approx(20.0)
-    assert stats["std"] == pytest.approx(10.0)
-    assert stats["min"] == pytest.approx(10.0)
-    assert stats["max"] == pytest.approx(30.0)
-    assert stats["n"] == 3
+def test_percentile_nearest_rank() -> None:
+    ordered = list(range(1, 101))
+    assert _percentile_nearest_rank(ordered, 50.0) == 50
+    assert _percentile_nearest_rank(ordered, 95.0) == 95
 
 
-def test_summarize_rejects_short_or_non_finite_samples() -> None:
+def test_distribution_reports_median_and_p95() -> None:
+    stats = _distribution(list(range(1, 101)))
+    assert stats["mean"] == pytest.approx(50.5)
+    assert stats["median"] == pytest.approx(50.5)
+    assert stats["p95"] == 95
+    assert stats["min"] == 1 and stats["max"] == 100 and stats["n"] == 100
+
+
+def test_distribution_rejects_short_or_non_finite_samples() -> None:
     with pytest.raises(ValueError):
-        _summarize([1.0])
+        _distribution([1.0])
     with pytest.raises(ValueError):
-        _summarize([1.0, float("nan")])
+        _distribution([1.0, float("nan")])
 
 
-def test_compose_payload_records_protocol_metadata() -> None:
+def test_bootstrap_ci_is_deterministic_and_covers_the_mean() -> None:
+    values = [float(10 + (index % 5)) for index in range(200)]
+    first = _bootstrap_ci_mean(values, resamples=1000, seed=0)
+    second = _bootstrap_ci_mean(values, resamples=1000, seed=0)
+    assert first == second
+    mean = sum(values) / len(values)
+    assert first[0] < mean < first[1]
+    assert first[0] <= first[1]
+
+
+def test_compose_payload_records_paired_protocol_metadata() -> None:
     payload = _payload()
-    stats = payload["statistics"]["overhead_percent"]
-    assert stats["mean"] == pytest.approx(20.0)
-    assert stats["std"] == pytest.approx(10.0)
-    assert stats["min"] == pytest.approx(10.0)
-    assert stats["max"] == pytest.approx(30.0)
-    assert stats["n"] == 3
-    assert len(payload["repetitions"]) == 3
-    assert payload["repetitions"][0]["off_ms_per_iteration"] == pytest.approx(200.0)
-    assert payload["run_id"] == "run-p1b"
-    assert payload["protocol"]["unit"]["overhead"] == "percent"
-    assert payload["protocol"]["sample_workload"] == {"mot": 4, "moe": 4, "latent": 1}
-    assert "off" in payload["protocol"]["arms"] and "on" in payload["protocol"]["arms"]
-    assert payload["protocol"]["threshold"] == "none (statistics only; no pre-registered <10% judgment)"
+    observations = payload["observations"]
+    assert len(observations) == _PAIR_COUNT
+    assert observations[0]["pair"] == 1
+    assert observations[0]["off_ms_per_iteration"] == pytest.approx(200.0)
+    assert observations[0]["on_ms_per_iteration"] > observations[0]["off_ms_per_iteration"]
+    assert observations[0]["difference_ms"] == pytest.approx(
+        observations[0]["on_ms_per_iteration"] - observations[0]["off_ms_per_iteration"]
+    )
+
+    protocol = payload["protocol"]
+    assert protocol["name"] == "p1-b-sample-overhead"
+    assert "alternating paired" in protocol["design"]
+    assert protocol["pairing"]["order"] == "OFF then ON within each observation"
+    assert protocol["sample_workload"] == {"mot": 4, "moe": 4, "latent": 1}
+    assert protocol["threshold"] == "none (statistics only; no pre-registered <10% judgment)"
+    assert payload["parameters"]["paired_observations"] == _PAIR_COUNT
+    assert payload["parameters"]["bootstrap"]["resamples"] == 10_000
     assert payload["baselines"]["official_base_ref"].startswith("3eb6cd9")
     assert payload["baselines"]["runtime_ultralytics_editable_install_head"] == "d604c4b"
     assert payload["baselines"]["baseline_root_head"] == "aa5d2e2"
     assert payload["environment"]["ultralytics"] == "8.4.101"
+
+
+def test_compose_payload_statistics_include_paired_metrics() -> None:
+    payload = _payload()
+    stats = payload["statistics"]
+    overhead = stats["overhead_percent"]
+    assert overhead["n"] == _PAIR_COUNT
+    for key in ("mean", "std", "median", "p95", "min", "max"):
+        assert isinstance(overhead[key], float)
+    ci95 = overhead["ci95"]
+    assert len(ci95) == 2 and ci95[0] <= overhead["mean"] <= ci95[1]
+    assert 3.0 < overhead["mean"] < 8.0  # synthetic pairs are ~5%
+    difference = stats["paired_difference_ms"]
+    assert difference["mean"] > 0.0
+    for key in ("mean", "std", "median", "p95", "min", "max"):
+        assert isinstance(difference[key], float)
 
 
 def test_verify_sample_overhead_accepts_valid_artifact(tmp_path: Path) -> None:
@@ -94,33 +138,42 @@ def test_verify_sample_overhead_reports_run_id_mismatch(tmp_path: Path) -> None:
     assert any("run_id mismatch" in error for error in errors)
 
 
-def test_verify_sample_overhead_reports_non_finite_statistics(tmp_path: Path) -> None:
+def test_verify_sample_overhead_reports_non_finite_mean(tmp_path: Path) -> None:
     payload = _payload()
     payload["statistics"]["overhead_percent"]["mean"] = float("nan")
     path = tmp_path / "sample_overhead_result.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
     errors = verify_sample_overhead_result(path, run_id="run-p1b")
-    assert any("non-finite" in error for error in errors)
+    assert any("mean missing or non-finite" in error for error in errors)
 
 
-def test_verify_sample_overhead_reports_fewer_than_three_repeats(tmp_path: Path) -> None:
+def test_verify_sample_overhead_reports_inverted_ci95(tmp_path: Path) -> None:
+    payload = _payload()
+    ci95 = payload["statistics"]["overhead_percent"]["ci95"]
+    payload["statistics"]["overhead_percent"]["ci95"] = [ci95[1], ci95[0]]
+    path = tmp_path / "sample_overhead_result.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    errors = verify_sample_overhead_result(path, run_id="run-p1b")
+    assert any("ci95" in error for error in errors)
+
+
+def test_verify_sample_overhead_reports_fewer_than_100_observations(tmp_path: Path) -> None:
     payload = compose_payload(
         run_id="run-p1b",
-        captured_at="2026-09-08T00:00:00+08:00",
-        started_at="2026-09-08T00:00:00+08:00",
-        finished_at="2026-09-08T00:00:20+08:00",
+        captured_at="2026-09-09T00:00:00+08:00",
+        started_at="2026-09-09T00:00:00+08:00",
+        finished_at="2026-09-09T00:00:20+08:00",
         model_config="ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml",
-        iterations=50,
+        pairs=50,
         warmup=5,
-        repeats=2,
         size=640,
-        arm_pairs=[(10.0, 12.0), (10.0, 11.0)],
+        arm_pairs=_arm_pairs()[:50],
         environment={"python": "3.11.9", "torch": "2.13.0+cpu", "ultralytics": "8.4.101", "platform": "test"},
     )
     path = tmp_path / "sample_overhead_result.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
     errors = verify_sample_overhead_result(path, run_id="run-p1b")
-    assert any(">= 3" in error for error in errors)
+    assert any(">= 100" in error for error in errors)
 
 
 def test_verify_sample_overhead_reports_missing_statistics(tmp_path: Path) -> None:

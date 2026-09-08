@@ -2,7 +2,7 @@
 
 Owner：刘欣燃（GitHub：`Aliferous-spec`）
 
-状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B（逐样本开销测量）尚未开始。
+状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」。
 
 本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`，没有提交上游 PR。
 
@@ -64,7 +64,15 @@ run_tests.cmd
 - P1-A sample：`sample_routing_records.jsonl` 51 行（mot 4x9 + moe 4x3 + latent 1x3），全行 `e3-routing/v1`、run_id 一致、per-family step 连续、主键无重复、canonical 未混入 sample rows。
 - manifest/verify：manifest 13 项 SHA-256 13/13 一致；`--verify-artifacts` → `result=PASS`（exit 0）。
 - 质量门：pytest `68 passed`；ruff（本次涉及文件）`All checks passed!`。
-- P1-B（逐样本开销测量）：**尚未开始**；本 closure 未做 overhead 实验。
+- P1-B（逐样本开销测量）：本 closure 未做 overhead 实验（P1-B 于 2026-09-09 独立实现并验收，见下）。
+
+## P1-B 逐样本开销测量（2026-09-09）
+
+- 实现：`scripts/measure_sample_capture_overhead.py` 与 runner 的 `sample_overhead` step；被测对象为 P1-A 逐样本采集链路（MoE yolo-master-n @ 640x640 CPU），产物 `sample_overhead_result.json` 独立于 canonical / sample JSONL。
+- 协议：iteration-level 交替配对——每对 = 1 次 OFF forward + 1 次 ON 采集 cycle，OFF→ON 相邻计时，抑制旧逐块协议（先连跑 50 次 OFF 再 50 次 ON）混入的慢漂移；warmup=5、120 paired observations（>= 100）；ON 臂含 BN running-state 恢复与 snapshot force，JSONL 写盘不计入。spec（`docs/p1-spec.md` §7）未定义 ABBA 参数，故采用单一 OFF→ON 顺序，并在 artifact 的 `protocol.pairing` 中记录该限制。
+- 统计：per-pair `overhead_percent`（mean ± std、median、P95、min/max、n）与 `paired_difference_ms`；mean overhead 的 percentile bootstrap 95% CI（10000 resamples、固定 seed）。artifact 记录 protocol / parameters / sample_workload / 环境 / 时间戳 / baseline 三元组。
+- 验收 run_id：`smoke-20260909-003356-2960be`；产物目录 `artifacts/smoke/smoke-20260909-003356-2960be/`（15 文件，manifest 覆盖 14 项）。`--verify-artifacts` → `result=PASS`；canonical `routing_records.jsonl` 仍为 15 行、`sample_routing_records.jsonl` 仍为 51 行；pytest `90 passed`。
+- 本次实测统计事实（只报告测量，不做 `<10%` 或性能结论，数值含运行噪声，以 artifact 原始数据为准）：overhead% mean 3.11（95% CI [0.51, 6.68]）、median 1.99、P95 14.18、min -37.27 / max 148.66、n=120；paired difference ms mean 6.31（median 3.99、P95 44.75）。
 
 ## 版本与边界
 
@@ -74,5 +82,5 @@ run_tests.cmd
   - 运行时 `ultralytics` 包来自 venv editable install：`D:\Claude_Workspace\projects\YOLO-Master-review`，HEAD `d604c4b`（工作树含未提交改动）；
   - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：`D:\YOLO-Master`，HEAD `aa5d2e2`；
   - 原因：验收在已部署的本地 checkout 上执行，review 与部署目录相对官方锁定 ref 各有演进与本地改动；该差异按环境实况记录（同 `docs/p0-acceptance.md` §4），不代表三处代码等价。
-- 已覆盖 MoT / MoE / Latent 三族；P1-B（逐样本开销测量）、实时面板、token 原图热图与正式统一 schema 冻结属于后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`）。
+- 已覆盖 MoT / MoE / Latent 三族；实时面板、token 原图热图与正式统一 schema 冻结属于后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`；P1-B 已于 2026-09-09 验收，见上「P1-B 逐样本开销测量」）。
 - 已知实现耦合：MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`，详见 `docs/smoke-design-and-schema.md` §7。

@@ -650,9 +650,10 @@ def run_sample_capture(config: Mapping[str, Any], artifacts: Path, logger: loggi
 def run_sample_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
     """P1-B step: measure per-sample capture overhead into its own artifact.
 
-    Reuses the P0 ``overhead`` config defaults (model config, iterations,
-    warmup, size) as the P1-B protocol parameters.  The measurement script
-    writes ``sample_overhead_result.json`` directly and this step returns no
+    Reuses the P0 ``overhead`` config defaults (model config, warmup, size) as
+    protocol parameters.  The measurement script runs its own paired-observation
+    protocol (default >= 100 alternating OFF/ON observations), writes
+    ``sample_overhead_result.json`` directly and this step returns no
     ``records``, so canonical / sample JSONL row counts stay untouched.
     """
     overhead = config["overhead"]
@@ -662,7 +663,6 @@ def run_sample_overhead(config: dict[str, Any], artifacts: Path, logger: logging
         sys.executable,
         str(script),
         "--model", str(overhead["model_config"]),
-        "--iterations", str(overhead.get("iterations", 50)),
         "--warmup", str(overhead.get("warmup", 5)),
         "--size", str(overhead.get("size", 640)),
         "--run-id", run_id,
@@ -890,11 +890,14 @@ def verify_sample_records(sample_path: Path, *, run_id: str) -> list[str]:
 
 
 def verify_sample_overhead_result(path: Path, *, run_id: str) -> list[str]:
-    """P1-B artifact checks: presence, object shape, finite stats, repeats >= 3.
+    """P1-B artifact checks for the paired-observation protocol.
 
-    Returns a list of human-readable errors (empty list means valid).  The
-    artifact only exists in P1-B runs, so callers invoke this when the file is
-    present (older P0/P1-A evidence dirs are unaffected).
+    Validates presence, object shape, run_id, protocol/parameters metadata,
+    >= 100 paired observations with finite per-pair timings, and the
+    distribution + bootstrap 95% CI statistics.  Returns a list of
+    human-readable errors (empty list means valid).  The artifact only exists
+    in P1-B runs, so callers invoke this when the file is present (older
+    P0/P1-A evidence dirs are unaffected).
     """
     errors: list[str] = []
     path = Path(path)
@@ -910,9 +913,37 @@ def verify_sample_overhead_result(path: Path, *, run_id: str) -> list[str]:
         )
     if payload.get("run_id") != run_id:
         errors.append(f"sample overhead run_id mismatch: {payload.get('run_id')!r} != {run_id!r}")
-    for key in ("captured_at", "protocol", "parameters", "baselines", "environment", "statistics", "repetitions"):
+    for key in (
+        "captured_at",
+        "started_at",
+        "finished_at",
+        "protocol",
+        "parameters",
+        "baselines",
+        "environment",
+        "statistics",
+        "observations",
+    ):
         if key not in payload:
             errors.append(f"sample overhead missing field: {key}")
+
+    protocol = payload.get("protocol")
+    if not isinstance(protocol, dict) or protocol.get("name") != "p1-b-sample-overhead":
+        errors.append("sample overhead protocol.name must be 'p1-b-sample-overhead'")
+
+    parameters = payload.get("parameters")
+    if not isinstance(parameters, dict):
+        errors.append("sample overhead parameters missing or null")
+    else:
+        declared = parameters.get("paired_observations")
+        if isinstance(declared, bool) or not isinstance(declared, int) or declared < 100:
+            errors.append(
+                f"sample overhead parameters.paired_observations must be an int >= 100, got {declared!r}"
+            )
+        for key in ("model_config", "warmup_iterations", "size"):
+            if key not in parameters:
+                errors.append(f"sample overhead parameters missing field: {key}")
+
     stats = payload.get("statistics")
     if not isinstance(stats, dict):
         errors.append("sample overhead statistics missing or null")
@@ -921,7 +952,7 @@ def verify_sample_overhead_result(path: Path, *, run_id: str) -> list[str]:
         if not isinstance(overhead, dict):
             errors.append("sample overhead statistics.overhead_percent missing or null")
         else:
-            for key in ("mean", "std", "min", "max"):
+            for key in ("mean", "std", "median", "p95", "min", "max"):
                 value = overhead.get(key)
                 if (
                     value is None
@@ -931,11 +962,79 @@ def verify_sample_overhead_result(path: Path, *, run_id: str) -> list[str]:
                 ):
                     errors.append(f"sample overhead statistics.overhead_percent.{key} missing or non-finite")
             n = overhead.get("n")
-            if isinstance(n, bool) or not isinstance(n, int) or n < 3:
-                errors.append(f"sample overhead statistics.overhead_percent.n must be an int >= 3, got {n!r}")
-    repetitions = payload.get("repetitions")
-    if not isinstance(repetitions, list) or not repetitions:
-        errors.append("sample overhead repetitions missing or empty")
+            if isinstance(n, bool) or not isinstance(n, int) or n < 100:
+                errors.append(f"sample overhead statistics.overhead_percent.n must be an int >= 100, got {n!r}")
+            ci95 = overhead.get("ci95")
+            if (
+                not isinstance(ci95, list)
+                or len(ci95) != 2
+                or any(
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))
+                    for value in ci95
+                )
+                or float(ci95[0]) > float(ci95[1])
+            ):
+                errors.append(
+                    "sample overhead statistics.overhead_percent.ci95 must be [lo, hi] finite with lo <= hi"
+                )
+        difference = stats.get("paired_difference_ms")
+        if not isinstance(difference, dict):
+            errors.append("sample overhead statistics.paired_difference_ms missing or null")
+        else:
+            for key in ("mean", "median", "p95"):
+                value = difference.get(key)
+                if (
+                    value is None
+                    or isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))
+                ):
+                    errors.append(f"sample overhead statistics.paired_difference_ms.{key} missing or non-finite")
+
+    observations = payload.get("observations")
+    if not isinstance(observations, list) or len(observations) < 100:
+        errors.append(
+            "sample overhead observations must be a list of >= 100 paired observations, "
+            f"got {len(observations) if isinstance(observations, list) else type(observations).__name__}"
+        )
+    else:
+        for obs in observations:
+            if not isinstance(obs, dict):
+                errors.append("sample overhead observation must be an object")
+                continue
+            for key in (
+                "pair",
+                "off_seconds",
+                "on_seconds",
+                "overhead_percent",
+                "off_ms_per_iteration",
+                "on_ms_per_iteration",
+                "difference_ms",
+            ):
+                value = obs.get(key)
+                if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+                    errors.append(f"sample overhead observation.{key} missing or non-numeric")
+                    continue
+                if key == "pair" and (not isinstance(value, int) or value < 1):
+                    errors.append(f"sample overhead observation.pair must be an int >= 1, got {value!r}")
+                elif key in ("off_seconds", "on_seconds", "off_ms_per_iteration", "on_ms_per_iteration") and float(value) <= 0.0:
+                    errors.append(f"sample overhead observation.{key} must be positive")
+                elif key in ("overhead_percent", "difference_ms") and not math.isfinite(float(value)):
+                    errors.append(f"sample overhead observation.{key} must be finite")
+        if isinstance(parameters, dict):
+            declared = parameters.get("paired_observations")
+            if isinstance(declared, int) and declared != len(observations):
+                errors.append(
+                    f"sample overhead parameters.paired_observations ({declared}) != observation count ({len(observations)})"
+                )
+        if isinstance(stats, dict):
+            overhead = stats.get("overhead_percent")
+            if isinstance(overhead, dict):
+                n = overhead.get("n")
+                if isinstance(n, int) and n != len(observations):
+                    errors.append(f"sample overhead statistics.overhead_percent.n ({n}) != observation count ({len(observations)})")
     return errors
 
 

@@ -5,15 +5,28 @@ Structure mirrors ``measure_routing_hook_overhead.py``; the measured object is
 the P1-A per-sample capture path on the MoE model (the chain that also carries
 BatchNorm running-state restore and forced snapshot refresh):
 
-- OFF arm: plain train-mode model forward (``iterations`` forwards).
-- ON arm: ``iterations`` P1-A sample capture cycles, each = BN running-state
-  restore + forced MoE snapshot refresh + forward + module discovery/adapter
-  -> in-memory v1 records.  JSONL serialization is intentionally excluded
-  (spec section 7 keeps it out of the measured arms).
+- OFF arm: one plain train-mode model forward.
+- ON arm: one P1-A sample capture cycle = BN running-state restore + forced
+  MoE snapshot refresh + forward + module discovery/adapter -> in-memory v1
+  records.  JSONL serialization is intentionally excluded (spec section 7
+  keeps it out of the measured arms).
 
-Each independent ON/OFF pair is repeated ``--repeats`` times; the artifact
-records protocol metadata, the baseline triple, environment, and per-pair
-overhead statistics (mean +/- std, min/max, n).
+Protocol: iteration-level alternating paired observations.  Each observation
+times one OFF iteration followed immediately by one ON iteration, so slow
+machine drift stays inside a single observation instead of being subtracted
+across minutes (the superseded design timed whole 50-iteration OFF then ON
+blocks and left drift in the difference).  The spec (docs/p1-spec.md section
+7) only requires >= 3 independent on/off repeats and defines no ABBA or
+order-balancing parameter, so a fixed OFF->ON order is used with that stated
+limitation.
+
+Each run records ``--pairs`` paired observations (default 120, target >= 100).
+Artifact statistics: per-observation ``overhead_percent`` (paired difference
+normalized by the OFF arm), ``paired_difference_ms`` (ON - OFF), and the
+OFF/ON ms per iteration.  Reported as mean +/- std, median, P95, min/max, n,
+plus a percentile bootstrap 95% CI of the mean overhead (deterministic seed).
+No <10% (or any) performance conclusion is drawn: the artifact only reports
+measured statistics.
 
 Example:
     python scripts/measure_sample_capture_overhead.py --run-id smoke-x --output sample_overhead_result.json
@@ -24,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import random
 import statistics
 import sys
 import time
@@ -36,7 +50,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-# Baseline triple recorded by P0/P1 evidence (docs README "版本与边界" / p1-spec
+# Baseline triple recorded by P0/P1 evidence (docs README "?????" / p1-spec
 # section 7): official locked config ref, runtime ultralytics editable install
 # HEAD, and the smoke baseline_root checkout HEAD.
 _OFFICIAL_BASE_REF = "3eb6cd914b651a06e2cd08ea87d12c28cab95502"
@@ -50,20 +64,43 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def _summarize(values: Sequence[float]) -> dict[str, float]:
-    """Return mean / std / min / max / n over a finite sample (n >= 2)."""
+def _percentile_nearest_rank(sorted_values: Sequence[float], percentile: float) -> float:
+    """Nearest-rank percentile over an ascending sequence (0 < p <= 100)."""
+    if not sorted_values or not 0.0 < percentile <= 100.0:
+        raise ValueError("percentile requires values and 0 < percentile <= 100")
+    index = max(0, math.ceil(percentile / 100.0 * len(sorted_values)) - 1)
+    return float(sorted_values[index])
+
+
+def _distribution(values: Sequence[float]) -> dict[str, float]:
+    """Return mean / std / median / p95 / min / max / n over finite values."""
     finite = [float(value) for value in values]
     if len(finite) < 2:
         raise ValueError("need at least 2 samples to summarize")
     if not all(math.isfinite(value) for value in finite):
         raise ValueError("cannot summarize non-finite values")
+    ordered = sorted(finite)
     return {
         "mean": float(statistics.fmean(finite)),
         "std": float(statistics.stdev(finite)),
-        "min": float(min(finite)),
-        "max": float(max(finite)),
+        "median": float(statistics.median(finite)),
+        "p95": _percentile_nearest_rank(ordered, 95.0),
+        "min": float(ordered[0]),
+        "max": float(ordered[-1]),
         "n": len(finite),
     }
+
+
+def _bootstrap_ci_mean(values: Sequence[float], *, resamples: int, seed: int) -> list[float]:
+    """Percentile bootstrap 95% CI of the mean over ``values`` (deterministic)."""
+    finite = [float(value) for value in values]
+    if len(finite) < 2:
+        raise ValueError("need at least 2 samples to bootstrap")
+    if not all(math.isfinite(value) for value in finite):
+        raise ValueError("cannot bootstrap non-finite values")
+    rng = random.Random(seed)
+    means = sorted(statistics.fmean(rng.choices(finite, k=len(finite))) for _ in range(resamples))
+    return [float(means[int(resamples * 0.025)]), float(means[int(resamples * 0.975) - 1])]
 
 
 def _environment() -> dict[str, str]:
@@ -80,19 +117,21 @@ def _environment() -> dict[str, str]:
     }
 
 
-def _repeat_payload(index: int, off_seconds: float, on_seconds: float, iterations: int) -> dict[str, float]:
+def _observation_payload(index: int, off_seconds: float, on_seconds: float) -> dict[str, float]:
+    """One paired OFF/ON observation: raw times, overhead %, and ms difference."""
     if not (math.isfinite(off_seconds) and math.isfinite(on_seconds)) or off_seconds <= 0.0:
         raise ValueError("arm timings must be finite and off_seconds > 0")
     overhead = (on_seconds - off_seconds) / off_seconds * 100.0
     if not math.isfinite(overhead):
         raise ValueError("overhead_percent must be finite")
     return {
-        "repeat": index + 1,
+        "pair": index + 1,
         "off_seconds": float(off_seconds),
         "on_seconds": float(on_seconds),
         "overhead_percent": float(overhead),
-        "off_ms_per_iteration": float(off_seconds / iterations * 1000.0),
-        "on_ms_per_iteration": float(on_seconds / iterations * 1000.0),
+        "off_ms_per_iteration": float(off_seconds * 1000.0),
+        "on_ms_per_iteration": float(on_seconds * 1000.0),
+        "difference_ms": float((on_seconds - off_seconds) * 1000.0),
     }
 
 
@@ -103,20 +142,26 @@ def compose_payload(
     started_at: str,
     finished_at: str,
     model_config: str,
-    iterations: int,
+    pairs: int,
     warmup: int,
-    repeats: int,
     size: int,
     arm_pairs: Sequence[tuple[float, float]],
     environment: Mapping[str, str],
+    bootstrap_resamples: int = 10_000,
+    bootstrap_seed: int = 0,
 ) -> dict[str, Any]:
     """Assemble the P1-B artifact payload from one measured run."""
-    if len(arm_pairs) != repeats:
-        raise ValueError(f"arm_pairs {len(arm_pairs)} != repeats {repeats}")
-    repetitions = [
-        _repeat_payload(index, off_seconds, on_seconds, iterations)
+    if len(arm_pairs) != pairs:
+        raise ValueError(f"arm_pairs {len(arm_pairs)} != pairs {pairs}")
+    observations = [
+        _observation_payload(index, off_seconds, on_seconds)
         for index, (off_seconds, on_seconds) in enumerate(arm_pairs)
     ]
+    overhead_values = [obs["overhead_percent"] for obs in observations]
+    overhead_stats = _distribution(overhead_values)
+    overhead_stats["ci95"] = _bootstrap_ci_mean(
+        overhead_values, resamples=bootstrap_resamples, seed=bootstrap_seed
+    )
     return {
         "run_id": run_id,
         "captured_at": captured_at,
@@ -124,6 +169,15 @@ def compose_payload(
         "finished_at": finished_at,
         "protocol": {
             "name": "p1-b-sample-overhead",
+            "design": "iteration-level alternating paired OFF/ON observations",
+            "pairing": {
+                "order": "OFF then ON within each observation",
+                "rationale": (
+                    "adjacent pairing bounds slow machine drift within one "
+                    "observation; spec section 7 defines no ABBA parameter, "
+                    "so a single OFF->ON order is used"
+                ),
+            },
             "measured_object": (
                 "P1-A per-sample capture chain on the MoE yolo-master-n model "
                 "(snapshot force + BatchNorm running-state restore + forward + "
@@ -131,14 +185,15 @@ def compose_payload(
                 "capture reuse the same primitives on plain eval forwards"
             ),
             "arms": {
-                "off": "plain train-mode model forward",
-                "on": "P1-A per-sample capture cycle (BN restore + snapshot force + "
+                "off": "one plain train-mode model forward",
+                "on": "one P1-A sample capture cycle (BN restore + snapshot force + "
                 "forward + adapters; JSONL write excluded)",
             },
             "unit": {
-                "overhead": "percent",
+                "overhead": "percent of off-arm time (paired difference)",
                 "latency": "seconds",
                 "per_iteration": "milliseconds per forward / capture cycle",
+                "difference": "milliseconds (on - off) within an observation",
             },
             "sample_input": {
                 "shape": [1, 3, size, size],
@@ -151,10 +206,15 @@ def compose_payload(
         },
         "parameters": {
             "model_config": model_config,
-            "iterations_per_arm": iterations,
             "warmup_iterations": warmup,
-            "independent_repeats": repeats,
+            "paired_observations": pairs,
+            "workload_per_observation": "1 OFF forward + 1 ON P1-A capture cycle",
             "size": size,
+            "bootstrap": {
+                "method": "percentile bootstrap of the mean (2.5%-97.5%)",
+                "resamples": bootstrap_resamples,
+                "seed": bootstrap_seed,
+            },
         },
         "baselines": {
             "official_base_ref": _OFFICIAL_BASE_REF,
@@ -163,18 +223,18 @@ def compose_payload(
         },
         "environment": dict(environment),
         "statistics": {
-            "overhead_percent": _summarize([rep["overhead_percent"] for rep in repetitions]),
-            "off_seconds": _summarize([rep["off_seconds"] for rep in repetitions]),
-            "on_seconds": _summarize([rep["on_seconds"] for rep in repetitions]),
+            "overhead_percent": overhead_stats,
+            "paired_difference_ms": _distribution([obs["difference_ms"] for obs in observations]),
+            "off_ms_per_iteration": _distribution([obs["off_ms_per_iteration"] for obs in observations]),
+            "on_ms_per_iteration": _distribution([obs["on_ms_per_iteration"] for obs in observations]),
         },
-        "repetitions": repetitions,
+        "observations": observations,
     }
 
 
-def _timed(fn: Any, iterations: int) -> float:
+def _time_once(fn: Any) -> float:
     started = time.perf_counter()
-    for _ in range(iterations):
-        fn()
+    fn()
     return time.perf_counter() - started
 
 
@@ -185,9 +245,10 @@ def parse_args() -> argparse.Namespace:
         default="ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml",
         help="MoE model YAML to measure (same default as the P0 overhead step)",
     )
-    parser.add_argument("--iterations", type=int, default=50, help="forwards / capture cycles per arm")
-    parser.add_argument("--warmup", type=int, default=5, help="warmup forwards before timing")
-    parser.add_argument("--repeats", type=int, default=3, help="independent on/off pairs")
+    parser.add_argument(
+        "--pairs", type=int, default=120, help="paired OFF/ON observations to record (>= 100)"
+    )
+    parser.add_argument("--warmup", type=int, default=5, help="warmup forwards per arm before timing")
     parser.add_argument("--size", type=int, default=640, help="input resolution (square)")
     parser.add_argument("--run-id", required=True, help="smoke run_id recorded in the artifact")
     parser.add_argument("--output", required=True, type=Path, help="path to write sample_overhead_result.json")
@@ -246,11 +307,12 @@ def main() -> int:
         on_iteration()
 
     arm_pairs: list[tuple[float, float]] = []
-    for _ in range(args.repeats):
-        off_seconds = _timed(off_iteration, args.iterations)
-        on_seconds = _timed(on_iteration, args.iterations)
+    for pair in range(args.pairs):
+        off_seconds = _time_once(off_iteration)
+        on_seconds = _time_once(on_iteration)
         arm_pairs.append((off_seconds, on_seconds))
-        print(f"rep {len(arm_pairs)}: off={off_seconds:.3f}s on={on_seconds:.3f}s")
+        if (pair + 1) % 25 == 0 or pair + 1 == args.pairs:
+            print(f"pair {pair + 1}/{args.pairs}: off={off_seconds * 1000:.1f}ms on={on_seconds * 1000:.1f}ms")
 
     try:
         payload = compose_payload(
@@ -259,9 +321,8 @@ def main() -> int:
             started_at=started_at,
             finished_at=_now_iso(),
             model_config=args.model,
-            iterations=args.iterations,
+            pairs=args.pairs,
             warmup=args.warmup,
-            repeats=args.repeats,
             size=int(args.size),
             arm_pairs=arm_pairs,
             environment=_environment(),
@@ -273,10 +334,16 @@ def main() -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     stats = payload["statistics"]["overhead_percent"]
+    difference = payload["statistics"]["paired_difference_ms"]
     print(
         "sample overhead: "
-        f"mean {stats['mean']:.2f}% +/- {stats['std']:.2f}% "
+        f"mean {stats['mean']:.2f}% (95% CI [{stats['ci95'][0]:.2f}, {stats['ci95'][1]:.2f}]) "
+        f"median {stats['median']:.2f}% p95 {stats['p95']:.2f}% "
         f"(min {stats['min']:.2f}, max {stats['max']:.2f}, n {stats['n']})"
+    )
+    print(
+        "paired difference ms: "
+        f"mean {difference['mean']:.2f} (median {difference['median']:.2f}, p95 {difference['p95']:.2f})"
     )
     print(f"wrote {output}")
     return 0
