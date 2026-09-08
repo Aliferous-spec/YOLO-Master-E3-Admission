@@ -647,6 +647,47 @@ def run_sample_capture(config: Mapping[str, Any], artifacts: Path, logger: loggi
     return {"sample_file": sample_path.name, "sample_records": written, "families": details}
 
 
+def run_sample_overhead(config: dict[str, Any], artifacts: Path, logger: logging.Logger, *, run_id: str) -> dict[str, Any]:
+    """P1-B step: measure per-sample capture overhead into its own artifact.
+
+    Reuses the P0 ``overhead`` config defaults (model config, iterations,
+    warmup, size) as the P1-B protocol parameters.  The measurement script
+    writes ``sample_overhead_result.json`` directly and this step returns no
+    ``records``, so canonical / sample JSONL row counts stay untouched.
+    """
+    overhead = config["overhead"]
+    script = PACKAGE_ROOT / "scripts" / "measure_sample_capture_overhead.py"
+    output = artifacts / "sample_overhead_result.json"
+    command = [
+        sys.executable,
+        str(script),
+        "--model", str(overhead["model_config"]),
+        "--iterations", str(overhead.get("iterations", 50)),
+        "--warmup", str(overhead.get("warmup", 5)),
+        "--size", str(overhead.get("size", 640)),
+        "--run-id", run_id,
+        "--output", str(output),
+    ]
+    logger.info("Sample overhead: %s", " ".join(command))
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
+    text = result.stdout + result.stderr
+    logger.info(text)
+    if result.returncode != 0:
+        raise RuntimeError(f"sample overhead measurement failed with rc={result.returncode}")
+    if not output.is_file():
+        raise RuntimeError(f"sample overhead artifact missing after run: {output}")
+    errors = verify_sample_overhead_result(output, run_id=run_id)
+    if errors:
+        raise RuntimeError("sample overhead artifact invalid: " + "; ".join(errors))
+    stats = json.loads(output.read_text(encoding="utf-8"))["statistics"]["overhead_percent"]
+    logger.info("sample_overhead_percent_mean=%s n=%s", stats["mean"], stats["n"])
+    return {
+        "sample_overhead_file": output.name,
+        "overhead_percent": stats["mean"],
+        "repetitions": stats["n"],
+    }
+
+
 def parse_overhead_percent(text: str) -> float:
     """Parse ``overhead: 1.50%`` output, accepting optional +/- signs.
 
@@ -848,6 +889,56 @@ def verify_sample_records(sample_path: Path, *, run_id: str) -> list[str]:
     return errors
 
 
+def verify_sample_overhead_result(path: Path, *, run_id: str) -> list[str]:
+    """P1-B artifact checks: presence, object shape, finite stats, repeats >= 3.
+
+    Returns a list of human-readable errors (empty list means valid).  The
+    artifact only exists in P1-B runs, so callers invoke this when the file is
+    present (older P0/P1-A evidence dirs are unaffected).
+    """
+    errors: list[str] = []
+    path = Path(path)
+    if not path.is_file():
+        return [f"sample overhead result missing: {path}"]
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return [f"sample overhead result unreadable: {path}: {exc}"]
+    if not isinstance(payload, dict):
+        raise RuntimeError(  # noqa: TRY004
+            f"sample overhead result must be a JSON object, got {type(payload).__name__}"
+        )
+    if payload.get("run_id") != run_id:
+        errors.append(f"sample overhead run_id mismatch: {payload.get('run_id')!r} != {run_id!r}")
+    for key in ("captured_at", "protocol", "parameters", "baselines", "environment", "statistics", "repetitions"):
+        if key not in payload:
+            errors.append(f"sample overhead missing field: {key}")
+    stats = payload.get("statistics")
+    if not isinstance(stats, dict):
+        errors.append("sample overhead statistics missing or null")
+    else:
+        overhead = stats.get("overhead_percent")
+        if not isinstance(overhead, dict):
+            errors.append("sample overhead statistics.overhead_percent missing or null")
+        else:
+            for key in ("mean", "std", "min", "max"):
+                value = overhead.get(key)
+                if (
+                    value is None
+                    or isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))
+                ):
+                    errors.append(f"sample overhead statistics.overhead_percent.{key} missing or non-finite")
+            n = overhead.get("n")
+            if isinstance(n, bool) or not isinstance(n, int) or n < 3:
+                errors.append(f"sample overhead statistics.overhead_percent.n must be an int >= 3, got {n!r}")
+    repetitions = payload.get("repetitions")
+    if not isinstance(repetitions, list) or not repetitions:
+        errors.append("sample overhead repetitions missing or empty")
+    return errors
+
+
 def load_mot_records(csv_path: Path) -> list[dict[str, Any]]:
     """Read ``mot_routing_detailed.csv`` into per-decision validation records."""
     if not csv_path.is_file():
@@ -920,6 +1011,10 @@ def verify_artifacts(artifacts: Path) -> list[str]:
     elif overhead.get("overhead_percent") is None:
         errors.append("overhead_percent missing or null")
 
+    sample_overhead_json = artifacts / "sample_overhead_result.json"
+    if sample_overhead_json.is_file():
+        errors.extend(verify_sample_overhead_result(sample_overhead_json, run_id=artifacts.name))
+
     return errors
 
 
@@ -990,6 +1085,7 @@ def main(argv: list[str] | None = None) -> int:
         "samples": lambda: run_sample_capture(
             config, artifacts, logger, run_id=run_id, baseline_root=baseline_root
         ),
+        "sample_overhead": lambda: run_sample_overhead(config, artifacts, logger, run_id=run_id),
     }
     step_summary, records = execute_smoke_steps(steps, logger)
     summary.update(step_summary)

@@ -1,0 +1,103 @@
+{
+  "run_id": "smoke-20260909-001109-11e290",
+  "captured_at": "2026-09-09T00:11:41+08:00",
+  "started_at": "2026-09-09T00:11:41+08:00",
+  "finished_at": "2026-09-09T00:12:42+08:00",
+  "protocol": {
+    "name": "p1-b-sample-overhead",
+    "measured_object": "P1-A per-sample capture chain on the MoE yolo-master-n model (snapshot force + BatchNorm running-state restore + forward + discovery/adapter -> in-memory v1 records); MoT/Latent sample capture reuse the same primitives on plain eval forwards",
+    "arms": {
+      "off": "plain train-mode model forward",
+      "on": "P1-A per-sample capture cycle (BN restore + snapshot force + forward + adapters; JSONL write excluded)"
+    },
+    "unit": {
+      "overhead": "percent",
+      "latency": "seconds",
+      "per_iteration": "milliseconds per forward / capture cycle"
+    },
+    "sample_input": {
+      "shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "source": "random tensor (same shape as the P1-A MoE coco8 val letterboxed input)",
+      "mode": "train"
+    },
+    "sample_workload": {
+      "mot": 4,
+      "moe": 4,
+      "latent": 1
+    },
+    "device": "cpu",
+    "threshold": "none (statistics only; no pre-registered <10% judgment)"
+  },
+  "parameters": {
+    "model_config": "ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml",
+    "iterations_per_arm": 50,
+    "warmup_iterations": 5,
+    "independent_repeats": 3,
+    "size": 640
+  },
+  "baselines": {
+    "official_base_ref": "3eb6cd914b651a06e2cd08ea87d12c28cab95502",
+    "runtime_ultralytics_editable_install_head": "d604c4b",
+    "baseline_root_head": "aa5d2e2"
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101"
+  },
+  "statistics": {
+    "overhead_percent": {
+      "mean": 0.8294390759676689,
+      "std": 2.031340705949856,
+      "min": -0.7431200056316971,
+      "max": 3.1229141962487867,
+      "n": 3
+    },
+    "off_seconds": {
+      "mean": 9.88964843338666,
+      "std": 0.11178893413528723,
+      "min": 9.761182500049472,
+      "max": 9.964796700049192,
+      "n": 3
+    },
+    "on_seconds": {
+      "mean": 9.972577466707056,
+      "std": 0.2824278171620229,
+      "min": 9.688645200105384,
+      "max": 10.253476399928331,
+      "n": 3
+    }
+  },
+  "repetitions": [
+    {
+      "repeat": 1,
+      "off_seconds": 9.942966100061312,
+      "on_seconds": 10.253476399928331,
+      "overhead_percent": 3.1229141962487867,
+      "off_ms_per_iteration": 198.85932200122625,
+      "on_ms_per_iteration": 205.06952799856663
+    },
+    {
+      "repeat": 2,
+      "off_seconds": 9.964796700049192,
+      "on_seconds": 9.975610800087452,
+      "overhead_percent": 0.1085230372859171,
+      "off_ms_per_iteration": 199.29593400098383,
+      "on_ms_per_iteration": 199.51221600174904
+    },
+    {
+      "repeat": 3,
+      "off_seconds": 9.761182500049472,
+      "on_seconds": 9.688645200105384,
+      "overhead_percent": -0.7431200056316971,
+      "off_ms_per_iteration": 195.22365000098944,
+      "on_ms_per_iteration": 193.77290400210768
+    }
+  ]
+}
