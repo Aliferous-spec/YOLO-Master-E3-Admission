@@ -1,0 +1,5 @@
+{
+  "returncode": 0,
+  "output": "WARNING no model scale passed. Assuming scale='n'.\nModule Name                                        | Type                           | Status\n------------------------------------------------------------------------------------------\nmodel.5.routing                                    | DualStreamGateRouter           |  Hooked\nmodel.8.routing                                    | DualStreamGateRouter           |  Hooked\nmodel.11.routing                                   | DualStreamGateRouter           |  Hooked\n\n Successfully hooked 3 router module(s)\n------------------------------------------------------------------------------------------\nwithout hook: 7.077s (141.5 ms/forward)\nwith hook:    7.256s (145.1 ms/forward)\noverhead:     2.53% (target < 10%)\n",
+  "overhead_percent": 2.53
+}

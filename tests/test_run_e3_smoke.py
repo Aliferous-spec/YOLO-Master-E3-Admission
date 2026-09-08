@@ -14,12 +14,14 @@ import json
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.run_e3_smoke import (
+    _require_moe_validator_api,
     apply_seed,
     build_manifest,
     execute_smoke_steps,
@@ -277,3 +279,53 @@ def test_apply_seed_makes_same_seed_reproducible_and_different_seed_diverge() ->
 
 def test_apply_seed_defaults_to_zero() -> None:
     assert apply_seed({}) == 0
+
+
+# ---------------------------------------------------------------------------
+# S5: MoE sample-tensor private validator API guard
+# ---------------------------------------------------------------------------
+
+def _fake_yolo(**members: Any) -> Any:
+    yolo = type("FakeYOLO", (), {})()
+    for name, value in members.items():
+        setattr(yolo, name, value)
+    return yolo
+
+
+def _fake_validator(**members: Any) -> type:
+    cls = type("FakeValidator", (), {"__init__": lambda self, *args, **kwargs: None})
+    for name, value in members.items():
+        setattr(cls, name, value)
+    return cls
+
+
+def test_moe_validator_guard_accepts_baseline_api() -> None:
+    validator = _fake_validator(get_dataloader=lambda *a, **k: None, preprocess=lambda *a, **k: {})
+    yolo = _fake_yolo(_smart_load=lambda key: validator)
+    assert _require_moe_validator_api(yolo, "8.4.101") is validator
+
+
+def test_moe_validator_guard_rejects_older_ultralytics() -> None:
+    with pytest.raises(RuntimeError) as excinfo:
+        _require_moe_validator_api(_fake_yolo(), "8.3.0")
+    message = str(excinfo.value)
+    assert "8.3.0" in message
+    assert "ultralytics" in message
+
+
+def test_moe_validator_guard_reports_missing_smart_load() -> None:
+    with pytest.raises(TypeError) as excinfo:
+        _require_moe_validator_api(_fake_yolo(), "8.4.101")
+    message = str(excinfo.value)
+    assert "YOLO._smart_load" in message
+    assert "8.4.101" in message
+
+
+def test_moe_validator_guard_reports_missing_validator_method() -> None:
+    validator = _fake_validator(get_dataloader=lambda *a, **k: None)
+    yolo = _fake_yolo(_smart_load=lambda key: validator)
+    with pytest.raises(RuntimeError) as excinfo:
+        _require_moe_validator_api(yolo, "8.4.101")
+    message = str(excinfo.value)
+    assert "validator.preprocess" in message
+    assert "8.4.101" in message

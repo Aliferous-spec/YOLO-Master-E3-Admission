@@ -452,6 +452,58 @@ def _mot_sample_tensors(config: Mapping[str, Any], baseline_root: Path, size: in
     return [tensor for _name, tensor, _image_ids in scenes]
 
 
+# P1-A MoE sample tensors reproduce the val-pipeline inputs by driving private
+# ultralytics internals (``YOLO._smart_load("validator")`` plus the
+# validator's ``get_dataloader`` / ``preprocess``); guard that surface so a
+# baseline API change fails fast with the installed version + missing item
+# instead of a mid-run AttributeError.  P0/P1-A smoke validated 8.4.101.
+_MOE_SAMPLE_MIN_ULTRALYTICS = (8, 4, 0)
+_MOE_SAMPLE_VALIDATED_ULTRALYTICS = "8.4.101"
+
+
+def _ultralytics_version_tuple(version: str) -> tuple[int, ...]:
+    """Leading numeric version components, e.g. ``8.4.101`` -> ``(8, 4, 101)``."""
+    return tuple(int(part) for part in re.findall(r"\d+", version)[:3])
+
+
+def _require_moe_validator_api(yolo: Any, version: str) -> Any:
+    """Require the private validator API ``_moe_val_sample_tensors`` relies on.
+
+    Returns the validator class so the caller constructs it exactly as before;
+    raises RuntimeError/TypeError with ``version`` and the missing item otherwise.
+    """
+    if _ultralytics_version_tuple(version) < _MOE_SAMPLE_MIN_ULTRALYTICS:
+        minimum = ".".join(str(part) for part in _MOE_SAMPLE_MIN_ULTRALYTICS)
+        raise RuntimeError(
+            f"MoE sample capture needs ultralytics >= {minimum} "
+            f"(validated on {_MOE_SAMPLE_VALIDATED_ULTRALYTICS}); installed={version}"
+        )
+    smart_load = getattr(yolo, "_smart_load", None)
+    if not callable(smart_load):
+        raise TypeError(
+            f"MoE sample capture depends on private ultralytics API YOLO._smart_load, "
+            f"missing in ultralytics {version}"
+        )
+    try:
+        validator_cls = smart_load("validator")
+    except Exception as exc:
+        raise RuntimeError(
+            f"MoE sample capture depends on private ultralytics API "
+            f"YOLO._smart_load('validator'), unavailable in ultralytics {version}: {exc}"
+        ) from exc
+    missing = [
+        f"validator.{name}"
+        for name in ("get_dataloader", "preprocess")
+        if not callable(getattr(validator_cls, name, None))
+    ]
+    if missing:
+        raise RuntimeError(
+            "MoE sample capture depends on private ultralytics validator API "
+            f"{', '.join(missing)}, missing in ultralytics {version}"
+        )
+    return validator_cls
+
+
 def _moe_val_sample_tensors(yolo: Any, config: Mapping[str, Any]) -> list[Any]:
     """Return the coco8 val image tensors exactly as the YOLO val pipeline feeds them.
 
@@ -460,6 +512,7 @@ def _moe_val_sample_tensors(yolo: Any, config: Mapping[str, Any]) -> list[Any]:
     ``ExpertUsageTracker`` evidence sees; external-id association is ordinal.
     """
     import torch
+    import ultralytics
     from ultralytics.data.utils import check_det_dataset
 
     moe = config["moe"]
@@ -474,7 +527,8 @@ def _moe_val_sample_tensors(yolo: Any, config: Mapping[str, Any]) -> list[Any]:
         "verbose": False,
         "mode": "val",
     }
-    validator = yolo._smart_load("validator")(args=args, _callbacks={})
+    validator_cls = _require_moe_validator_api(yolo, str(ultralytics.__version__))
+    validator = validator_cls(args=args, _callbacks={})
     validator.training = False
     validator.args.workers = 0
     validator.args.rect = True
