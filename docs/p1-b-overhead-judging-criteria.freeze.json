@@ -1,0 +1,27 @@
+{
+  "document": "docs/p1-b-overhead-judging-criteria.md",
+  "freeze_commit": "797d5fd7748b2bb863a2cb309627e91a8052c8b3",
+  "freeze_time": "2026-09-10T00:52:17+08:00",
+  "blob_sha1": "471618d928c410bcaedba412c1b992f66a29bf97",
+  "blob_sha256": "e575c59bbe85553bc0b6397eec33f812098c51ab743aa13effe6a27cd3258df4",
+  "note": "Hash is computed over the stored git blob (LF), not the working-copy bytes. Verify with: git rev-parse <commit>:<doc>",
+  "criteria": {
+    "metric": "mean overhead_percent of paired OFF/ON observations",
+    "rule": "PASS iff bootstrap 95% CI upper bound < 10.0%",
+    "bootstrap": {
+      "method": "percentile",
+      "resamples": 10000,
+      "seed": 0
+    },
+    "confirmatory_seeds": [
+      3,
+      4,
+      5
+    ],
+    "probe_seeds_excluded": [
+      0,
+      1,
+      2
+    ]
+  }
+}
