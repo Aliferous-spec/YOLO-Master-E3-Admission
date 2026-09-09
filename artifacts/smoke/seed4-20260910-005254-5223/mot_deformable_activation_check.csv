@@ -1,0 +1,9 @@
+alpha,baseline,baseline_image_samples,baseline_mean,bootstrap_ci95_high,bootstrap_ci95_low,deformable_significantly_higher,irregular_image_samples,irregular_mean,irregular_scenes,mean_diff,metric,permutation_p_value_one_sided,relative_lift
+0.0500,dense_small,1,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,top1_share,1.000000,nan
+0.0500,large_regular,1,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,top1_share,1.000000,nan
+0.0500,sparse_small,1,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,top1_share,1.000000,nan
+0.0500,non_irregular_pooled,3,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,top1_share,1.000000,nan
+0.0500,dense_small,1,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,mean_weight,1.000000,nan
+0.0500,large_regular,1,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,mean_weight,1.000000,nan
+0.0500,sparse_small,1,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,mean_weight,1.000000,nan
+0.0500,non_irregular_pooled,3,0.000000,0.000000,0.000000,False,1,0.000000,irregular_occluded,0.000000,mean_weight,1.000000,nan
