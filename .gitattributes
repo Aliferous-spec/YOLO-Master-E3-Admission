@@ -1,3 +1,10 @@
+# Evidence integrity: artifacts are hash-pinned by manifest.sha256.json
+# (SHA-256 over the exact bytes produced at run time — all LF, writers use
+# newline="\n").  Any line-ending conversion on checkout changes the bytes
+# and breaks verification.  The previous rule `artifacts/** text eol=crlf`
+# forced LF->CRLF on fresh clones and caused "sha256 mismatch" (verified
+# experimentally on 2026-09-09).  -text disables all conversion so every
+# clone is byte-identical to the hashed evidence.
 * text=auto
-artifacts/** text eol=crlf
+artifacts/** -text
 *.png binary
