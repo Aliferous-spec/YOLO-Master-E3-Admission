@@ -1154,7 +1154,16 @@ def main(argv: list[str] | None = None) -> int:
     apply_seed(config)
     baseline_root = resolve_baseline_root(config, args.baseline_root)
     if not baseline_root.is_dir():
-        raise SystemExit(f"baseline_root not found: {baseline_root}")
+        raise SystemExit(
+            f"baseline_root not found: {baseline_root}\n"
+            "The deployed YOLO-Master checkout is required (chdir target, harness "
+            "scripts, model configs). Fix it in one of three ways, in priority order:\n"
+            "  1. CLI flag:      --baseline-root D:/path/to/YOLO-Master\n"
+            "  2. env variable:  set BASELINE_ROOT=D:/path/to/YOLO-Master\n"
+            f"  3. config field:  baseline_root in {args.config} (currently "
+            f"{config.get('baseline_root', '../YOLO-Master')!r}, resolved relative "
+            "to this package)"
+        )
     os.chdir(baseline_root)
 
     run_id = resolve_run_id(config, args.run_id)
@@ -1197,6 +1206,30 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("routing_records.jsonl written: %d records -> %s", written, routing_path)
     else:
         logger.warning("no routing records collected; routing_records.jsonl not written")
+
+    # P1 panel sink: consumes the records already produced above (no extra
+    # forward, no hook). A panel failure must never fail the smoke run, so it
+    # is recorded in the summary as its own step.
+    try:
+        from scripts.routing_panel_sink import RoutingPanelSink, load_records
+
+        sample_path = artifacts / "sample_routing_records.jsonl"
+        with RoutingPanelSink(artifacts, run_id=run_id) as sink:
+            sink.add_records(records, stream="canonical")
+            if sample_path.is_file():
+                sink.add_records(load_records(sample_path), stream="sample")
+        panel_meta = sink.close()
+        summary["panel"] = panel_meta
+        logger.info(
+            "panel written: channels=%s families=%s missing=%s -> %s",
+            ",".join(panel_meta["channels"]),
+            ",".join(panel_meta["families_covered"]) or "none",
+            ",".join(panel_meta["families_missing"]) or "none",
+            panel_meta.get("html_path", "-"),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("panel sink failed: %s", exc)
+        summary["panel"] = {"status": "FAIL", "error": str(exc)}
 
     if summary["status"] == "PASS":
         failures: list[str] = []

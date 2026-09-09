@@ -329,3 +329,19 @@ def test_moe_validator_guard_reports_missing_validator_method() -> None:
     message = str(excinfo.value)
     assert "validator.preprocess" in message
     assert "8.4.101" in message
+
+
+def test_main_missing_baseline_root_exits_with_actionable_hint(tmp_path, monkeypatch) -> None:
+    """A misconfigured baseline path must fail with a fix hint, not a traceback."""
+    from scripts import run_e3_smoke as smoke_mod
+
+    config_path = tmp_path / "cfg.yaml"
+    config_path.write_text("baseline_root: does/not/exist\n", encoding="utf-8")
+    monkeypatch.setenv("BASELINE_ROOT", "")
+    # BASELINE_ROOT empty string is falsy for os.environ.get -> falls through to config.
+    with pytest.raises(SystemExit) as excinfo:
+        smoke_mod.main(["--config", str(config_path)])
+    message = str(excinfo.value)
+    assert "baseline_root not found" in message
+    assert "--baseline-root" in message
+    assert "BASELINE_ROOT" in message
