@@ -99,8 +99,8 @@ def test_compose_payload_records_paired_protocol_metadata() -> None:
     assert payload["parameters"]["paired_observations"] == _PAIR_COUNT
     assert payload["parameters"]["bootstrap"]["resamples"] == 10_000
     assert payload["baselines"]["official_base_ref"].startswith("3eb6cd9")
-    assert payload["baselines"]["runtime_ultralytics_editable_install_head"] == "d604c4b"
-    assert payload["baselines"]["baseline_root_head"] == "aa5d2e2"
+    assert payload["baselines"]["runtime_ultralytics_editable_install_head"] == "d604c4bca8ceba3240c730f1b6e2767b7a320f6c"
+    assert payload["baselines"]["baseline_root_head"] == "aa5d2e20c109b96f4a0c68f667ed2694586ef745"
     assert payload["environment"]["ultralytics"] == "8.4.101"
 
 

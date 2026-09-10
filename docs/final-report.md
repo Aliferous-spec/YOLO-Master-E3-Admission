@@ -3,7 +3,8 @@
 仓库：`Aliferous-spec/YOLO-Master-E3-Admission`
 报告生成：2026-09-10（UTC+8）
 证据环境：Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101 / Windows-10
-基线三元组：`3eb6cd914b651a06e2cd08ea87d12c28cab95502` / `d604c4b` / `aa5d2e2`
+基线三元组：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（官方锁定 ref） / `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（editable checkout） / `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（baseline_root）
+注：editable checkout（`D:\Claude_Workspace\projects\YOLO-Master-review`）与 baseline_root（`D:\YOLO-Master`）是**两个不同 checkout，不可视为同一个 commit**；training slowdown 正式运行以 `PYTHONPATH=D:/YOLO-Master` 使用 baseline（见 §5.1）。
 
 ---
 
@@ -29,7 +30,7 @@ MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing
 | 指标解析解真值锚点 | 完成 | `tests/test_metric_analytic_groundtruth.py`（14 项） |
 | 路由证据面板（双通道降级） | 完成 | `scripts/routing_panel_sink.py`（13 项测试） |
 | 开源形式项 | 完成 | MIT LICENSE、GitHub Actions CI、`env/`、`docs/limitations.md` |
-| 真实训练减速测量 | **未执行**（协议与脚本已实现并过单测） | 见 §5.1 |
+| 真实训练减速测量 | 完成（补充测量，seed 0/1/2，判据 PASS） | 见 §5.1 / `docs/p1-training-slowdown-result.md` |
 
 代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**124 个测试全部通过**。
 
@@ -139,7 +140,7 @@ TensorBoard 通道在 tensorboard 缺失时自动降级（本机即走 HTML 通�
 
 ## 5. 没做的、以及为什么（负结果照报）
 
-### 5.1 真实训练减速：协议已实现，未执行
+### 5.1 真实训练减速：已执行（补充测量，非验收依据）
 
 `scripts/measure_training_slowdown.py`（ABBA 块级配对、warmup、多 seed、
 bootstrap CI）已实现，6 项单测通过，预注册判据见 `docs/p1-judging-criteria.md`。
@@ -150,7 +151,11 @@ bootstrap CI）已实现，6 项单测通过，预注册判据见 `docs/p1-judgi
 这条同时确认了 P0/P1 的 MoE 侧确实走的是真实 coco8 val 图像，而非随机张量。）
 
 本次已作为**补充测量**执行：`--dry-run` 验证通过，正式运行见
-`artifacts/training_slowdown/` 下的 `slowdown_result.json`。
+`artifacts/training_slowdown/train-slowdown-20260911/slowdown_result.json`
+（逐项记录见 `docs/p1-training-slowdown-result.md`）。实测 seed 0/1/2、
+ABBA 块级配对 n=6：配对 slowdown mean **−5.38%**，bootstrap 95% CI
+**[−15.93%, +6.12%]**，按预注册判据「CI 上界 < 10%」判定 **PASS**（上界 +6.12%）；
+CI 跨 0，故不能据此声称观测链会加速训练。
 需要强调：`docs/requirements.md` §2 与 `docs/p1-spec.md` §10 明确把
 「训练减速 <10% 的正式结论」列入不做清单，因此无论跑出什么数字，
 它都**不作为验收依据**，只在补充章节如实披露。
@@ -211,4 +216,5 @@ python -m scripts.routing_panel_sink artifacts\smoke\<run_id>
 - 09-06~09：P1-A 逐样本采集、P1-B 逐样本采集链开销测量
 - 09-09：P0 三 seed 证据；解析解真值锚点；`.gitattributes` 证据损坏修复；
   LICENSE / CI / env / limitations
-- 09-10：P1-B 判据预注册 + 冻结锚点 + 确认性实验（seed 3/4/5，PASS 3/3）
+- 09-10：P1-B 判据预注册 + 冻结锚点 + 确认性实验（seed 3/4/5，PASS 3/3）；
+  真实训练减速补充测量（seed 0/1/2，ABBA 块级配对，判据 PASS）

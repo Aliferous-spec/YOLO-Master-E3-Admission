@@ -81,5 +81,5 @@ C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py
 ## 4. 环境与边界说明（如实记录，不构成 FAIL/BLOCKED）
 
 - overhead 实测值：首跑 `-9.44%`、验收跑 `21.75%`（hook 开关时间差波动）。P0-4 只要求解析带符号值并拒绝 NaN/Inf，P0 验收清单未包含 `<10%` 阈值判定，故不据此判 FAIL。
-- 运行时 `ultralytics` 包解析自 venv 的 editable 安装 `D:\Claude_Workspace\projects\YOLO-Master-review`（HEAD `d604c4b`，工作树含未提交改动）；smoke 的 `baseline_root`（chdir 目标、harness 脚本与 model config 来源）为 `D:\YOLO-Master`（HEAD `aa5d2e2`）；`configs/e3_smoke.yaml` 内 `official_base_ref: 3eb6cd9...` 为配置记录值，与上述两个 HEAD 不一致，属环境实况，仅记录备查。
+- 运行时 `ultralytics` 包解析自 venv 的 editable 安装 `D:\Claude_Workspace\projects\YOLO-Master-review`（HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`，工作树含未提交改动）；smoke 的 `baseline_root`（chdir 目标、harness 脚本与 model config 来源）为 `D:\YOLO-Master`（HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`）；两者是**两个不同 checkout，不可视为同一个 commit**。`configs/e3_smoke.yaml` 内 `official_base_ref: 3eb6cd9...` 为配置记录值，与上述两个 HEAD 不一致，属环境实况，仅记录备查。
 - 验收结论不涉及：统一 schema 正式冻结、训练减速正式结论、上游 PR。

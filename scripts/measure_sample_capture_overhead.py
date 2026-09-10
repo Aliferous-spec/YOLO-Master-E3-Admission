@@ -54,8 +54,9 @@ if str(PACKAGE_ROOT) not in sys.path:
 # section 7): official locked config ref, runtime ultralytics editable install
 # HEAD, and the smoke baseline_root checkout HEAD.
 _OFFICIAL_BASE_REF = "3eb6cd914b651a06e2cd08ea87d12c28cab95502"
-_ULTRALYTICS_EDITABLE_HEAD = "d604c4b"
-_BASELINE_ROOT_HEAD = "aa5d2e2"
+# editable review checkout: a DIFFERENT checkout from the smoke baseline_root below.
+_ULTRALYTICS_EDITABLE_HEAD = "d604c4bca8ceba3240c730f1b6e2767b7a320f6c"
+_BASELINE_ROOT_HEAD = "aa5d2e20c109b96f4a0c68f667ed2694586ef745"
 # P1-A per-family sample workload (spec section 1 conservative scope).
 _SAMPLE_WORKLOAD = {"mot": 4, "moe": 4, "latent": 1}
 

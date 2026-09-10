@@ -85,7 +85,7 @@
 
 - 臂：OFF=仅 model forward；ON=P1-A 逐样本采集路径（每样本 forward + snapshot 刷新/force + adapter 生成记录 + 内存缓存；MoE 侧含 BN 状态恢复）；JSONL 写盘单独计（可选拆 serialization 子臂）。
 - 参数（沿用 P0 脚本默认值，保守）：warmup=5，iterations=50/arm，size=640，device=cpu；独立 on/off 重复 ≥3 次。
-- 报告：每对 overhead% + mean ± std + min/max + n；artifact 记录协议参数、model config、环境、时间戳、baseline 三元组（`3eb6cd9` / `d604c4b` / `aa5d2e2`）。
+- 报告：每对 overhead% + mean ± std + min/max + n；artifact 记录协议参数、model config、环境、时间戳、baseline 三元组（`3eb6cd9` / `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（editable checkout） / `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（baseline_root）；后两者为不同 checkout，不可视为同一个 commit）。
 - MoE 的 snapshot 刷新与 BN 状态恢复开销必须显式计入 ON 臂并说明。
 - 明确：不引用、不混入 P0 `overhead_result.json` 数值（P0 数字是历史证据，不是 P1 结果）。
 - 阈值结论：P1-B 只报告统计量；不做 `<10%` 判定，除非另行预注册阈值与置信区间方法。

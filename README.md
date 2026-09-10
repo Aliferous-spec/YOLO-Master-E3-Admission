@@ -2,7 +2,7 @@
 
 Owner：刘欣燃（GitHub：`Aliferous-spec`）
 
-状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」。
+状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」；P1 真实训练减速补充测量已执行（2026-09-10，非验收依据），见下「P1 真实训练减速测量」。
 
 本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`，没有提交上游 PR。
 
@@ -74,13 +74,21 @@ run_tests.cmd
 - 验收 run_id：`smoke-20260909-003356-2960be`；产物目录 `artifacts/smoke/smoke-20260909-003356-2960be/`（15 文件，manifest 覆盖 14 项）。`--verify-artifacts` → `result=PASS`；canonical `routing_records.jsonl` 仍为 15 行、`sample_routing_records.jsonl` 仍为 51 行；pytest `90 passed`。
 - 本次实测统计事实（只报告测量，不做 `<10%` 或性能结论，数值含运行噪声，以 artifact 原始数据为准）：overhead% mean 3.11（95% CI [0.51, 6.68]）、median 1.99、P95 14.18、min -37.27 / max 148.66、n=120；paired difference ms mean 6.31（median 3.99、P95 44.75）。
 
+## P1 真实训练减速测量（补充测量，非验收依据）
+
+- 结果入口：`docs/p1-training-slowdown-result.md`；预注册判据 `docs/p1-judging-criteria.md`；artifact `artifacts/training_slowdown/train-slowdown-20260911/slowdown_result.json`。
+- 实测（seed 0/1/2，ABBA 块级配对 n=6）：配对 slowdown mean **−5.38%**，bootstrap 95% CI **[−15.93%, +6.12%]**；按预注册判据「CI 上界 < 10%」判定 **PASS**（上界 +6.12%）。
+- CI 跨 0，故不能据此声称观测链会加速训练。`docs/requirements.md` §2 与 `docs/p1-spec.md` §10 已把「训练减速 <10% 的正式结论」列入不做清单，本结果**不作为验收依据**，仅如实披露。
+- baseline_root：`D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；权重产物 `runs/seed*/weights/*.pt` 不纳入 Git（仅本地）。
+
 ## 版本与边界
 
 - 官方锁定基线（`configs/e3_smoke.yaml` 的 `official_base_ref` 记录值）：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（2026-08-23，main 分支）。
 - schema_version：当前实际为 `e3-routing/v1`（`routing_records.jsonl` 每条记录均为该值，验收见 `docs/p0-acceptance.md` §2.5）。8.25 admission 与 9.5 验收 run 的 `summary.json` / `config.resolved.yaml` 顶层遗留 `e3-routing-smoke/v0.1-candidate` 属历史证据，不重写；`configs/e3_smoke.yaml` 已同步为 `e3-routing/v1`。
 - 本次验收实际运行基线与锁定 ref **不一致**，如实记录、不伪装成同一基线：
-  - 运行时 `ultralytics` 包来自 venv editable install：`D:\Claude_Workspace\projects\YOLO-Master-review`，HEAD `d604c4b`（工作树含未提交改动）；
-  - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：`D:\YOLO-Master`，HEAD `aa5d2e2`；
+  - 运行时 `ultralytics` 包来自 venv editable install：`D:\Claude_Workspace\projects\YOLO-Master-review`，HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（工作树含未提交改动）；
+  - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：`D:\YOLO-Master`，HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；
+  - **editable 环境 HEAD 与 baseline HEAD 是两个不同 checkout，不可视为同一个 commit**：`d604c4bca8ceba3240c730f1b6e2767b7a320f6c` ≠ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；training slowdown 正式运行改以 `PYTHONPATH=D:/YOLO-Master` 解析到 baseline checkout（见 `docs/p1-training-slowdown-result.md` §1），与本节 smoke 的 editable 环境不同。
   - 原因：验收在已部署的本地 checkout 上执行，review 与部署目录相对官方锁定 ref 各有演进与本地改动；该差异按环境实况记录（同 `docs/p0-acceptance.md` §4），不代表三处代码等价。
 - 已覆盖 MoT / MoE / Latent 三族；实时面板、token 原图热图与正式统一 schema 冻结属于后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`；P1-B 已于 2026-09-09 验收，见上「P1-B 逐样本开销测量」）。
 - 已知实现耦合：MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`，详见 `docs/smoke-design-and-schema.md` §7。
