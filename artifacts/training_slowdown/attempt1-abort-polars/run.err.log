@@ -1,0 +1,1 @@
+measure_training_slowdown: Initial training state is nonfinite; refusing to start without a healthy recovery checkpoint.
