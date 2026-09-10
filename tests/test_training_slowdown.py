@@ -8,7 +8,6 @@ runs without the baseline environment.
 from __future__ import annotations
 
 import argparse
-import itertools
 import sys
 from pathlib import Path
 
@@ -76,7 +75,8 @@ def test_block_layout_follows_frozen_abba_order() -> None:
     assert layout[0]["block"] == 1 and layout[3]["block"] == 4
     assert layout[0]["epoch_start"] == 2
     assert layout[3]["epoch_end"] == 2 + 4 * 6
-    for previous, following in itertools.pairwise(layout):
+    # itertools.pairwise is 3.10+; the CI env is 3.9.
+    for previous, following in zip(layout, layout[1:]):
         assert previous["epoch_end"] == following["epoch_start"]
     with pytest.raises(ValueError):
         _block_layout(epochs_per_block=0, warmup_epochs=2)
