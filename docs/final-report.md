@@ -31,8 +31,11 @@ MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing
 | 路由证据面板（双通道降级） | 完成 | `scripts/routing_panel_sink.py`（13 项测试） |
 | 开源形式项 | 完成 | MIT LICENSE、GitHub Actions CI、`env/`、`docs/limitations.md` |
 | 真实训练减速测量 | 完成（补充测量，seed 0/1/2，判据 PASS） | 见 §5.1 / `docs/p1-training-slowdown-result.md` |
+| P0 静态图补全（MoE / Latent） | 完成 | `scripts/render_family_figures.py`；来源 run / 模块 / SHA-256 见 `artifacts/figures/p0/figures.json` |
+| 路由健康诊断（只读） | 完成 | `scripts/routing_health_check.py`；MoE 专家坍缩固化为可复现诊断，参考 Gini=(E−1)/E |
+| MoE 温度探针（补充证据，untrained routing-only） | 完成（诚实负结果） | `docs/moe-temperature-probe.md`；API 生效但效应有限，不继续 intervention、不声称性能 |
 
-代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**124 个测试全部通过**。
+代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**140 个测试全部通过**。
 
 ### 作者其他上游贡献
 
@@ -141,6 +144,23 @@ TensorBoard 通道在 tensorboard 缺失时自动降级（本机即走 HTML 通�
 三族覆盖情况（**缺哪族标 MISSING，不伪造**）、canonical/sample 双流分离、
 缺失指标渲染 `n/a` 而不是 `0.0`。面板渲染失败不会中断 smoke。
 
+### 4.5 路由健康诊断（只读，未训练基线）
+
+`scripts/routing_health_check.py`：把 §4.1 的「MoE 专家坍缩」从一段观察固化成可复现、可追溯的
+只读诊断——不训练、不改模型/forward/上游、不改既有 evidence。逐模块输出 Gini / 归一化熵 /
+top1_share / dominant expert，并按明确阈值判定 collapse（top1_share ≥ 0.80）、
+one_hot（≥ 0.999 且熵 ≤ 0.05）、uniform（熵 ≥ 0.99 且 Gini ≤ 0.01），
+参考量 `gini_one_hot_reference = (E−1)/E`。诊断 JSON 记录来源 `run_id`、`source` 路径与
+`source_sha256`（见 `docs/routing-health-check.md`）。
+
+### 4.6 MoE 温度探针（补充证据，untrained / routing-only）
+
+`scripts/probe_moe_temperature.py` 实测上游公开 API `anneal_mixture_temperatures(factor=2.0)`
+对**未训练随机初始化 checkpoint** 离散路由指标的影响：**API 生效且影响可观测，但效应有限**——
+top1_share 变化约 2 个百分点、Gini 变化 < 0.005、3 个 layer 的 dominant expert 全部未变。
+据此**不继续做完整 intervention**，且全程未训练、未评估精度，**不构成任何性能结论**
+（见 `docs/moe-temperature-probe.md`）。
+
 ---
 
 ## 5. 没做的、以及为什么（负结果照报）
@@ -189,7 +209,7 @@ MoT 在 MOT 任务上的评测、数据集扩展（coco8 之外）、分布式/�
 set PYTHONUTF8=1
 cd C:\tmp\e3-package                      :: 或你的包路径
 
-:: 1) 单测（124 项）
+:: 1) 单测（140 项）
 "C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
 
 :: 2) 一次 smoke（需要显式给基线路径）
@@ -224,3 +244,4 @@ python -m scripts.routing_panel_sink artifacts\smoke\<run_id>
 - 09-10：P1-B 判据预注册 + 冻结锚点 + 确认性实验（seed 3/4/5，PASS 3/3）；
   真实训练减速补充测量（seed 0/1/2，ABBA 块级配对，判据 PASS）
 - 09-11：作者的上游文档贡献 `Tencent/YOLO-Master#132`（Windows CPU inference setup guide）被上游仓库合并，Issue `#119` 关闭
+- 09-12：P0 静态图补全（MoE / Latent）；路由健康诊断（只读）；MoE 温度探针（untrained routing-only，诚实负结果）
