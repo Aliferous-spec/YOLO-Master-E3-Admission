@@ -13,7 +13,7 @@
 | 模型 cfg | `D:\YOLO-Master\ultralytics\cfg\models\master\v0_9\det\yolo-master-n.yaml` |
 | 数据 | `D:\YOLO-Master\ultralytics\cfg\datasets\coco8.yaml`（coco8，4 train / 4 val 图） |
 | imgsz / batch / device / workers | 640 / 1 / cpu / 2 |
-| Python | `C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe`（3.11.9） |
+| Python | `C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe`（3.11.9） |
 | `PYTHONPATH` | `D:\YOLO-Master`（`import ultralytics` 解析到 `D:\YOLO-Master\ultralytics\__init__.py`） |
 | torch / ultralytics | 2.13.0+cpu / 8.4.101 |
 | platform | Windows-10-10.0.26200-SP0 |
@@ -163,7 +163,7 @@ $env:PYTHONPATH = "D:\YOLO-Master"
 $env:PYTHONUTF8 = "1"
 # polars 官方开关，绕过本机 CPUID 误报（见 §7；不影响协议与测量）
 $env:POLARS_SKIP_CPU_CHECK = "1"
-& "C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
+& "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
     --baseline-root D:/YOLO-Master `
     --run-id train-slowdown-20260911
 ```
@@ -172,6 +172,6 @@ $env:POLARS_SKIP_CPU_CHECK = "1"
 
 ```powershell
 $env:PYTHONPATH = "D:\YOLO-Master"
-& "C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
+& "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
     --baseline-root D:/YOLO-Master --dry-run
 ```
