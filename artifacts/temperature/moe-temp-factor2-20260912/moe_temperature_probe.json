@@ -1,0 +1,232 @@
+{
+  "schema_version": "e3-temperature-probe/v1",
+  "generator": "scripts/probe_moe_temperature.py",
+  "purpose": "routing-only sensitivity probe for anneal_mixture_temperatures",
+  "scope": "untrained random-init checkpoint; routing-structure observation only. Not a training-performance claim and not an intervention result.",
+  "checkpoint": {
+    "source": "random_init_from_yaml",
+    "weights_sha256": "0809638cd04866194aa4e5ab0ac631b93a9ce894d2b5c8d72bac0fa8be4911ac",
+    "shared_by_all_arms": true
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "python_executable": "<baseline-python>",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101",
+    "cwd": "<baseline-root>",
+    "captured_at": "2026-09-12T01:42:07+08:00"
+  },
+  "config": {
+    "baseline_root": "D:\\YOLO-Master",
+    "model_config": "D:\\YOLO-Master\\ultralytics\\cfg\\models\\master\\v0_9\\det\\yolo-master-n.yaml",
+    "factor": 2.0,
+    "min_temp": 0.3,
+    "seed": 0,
+    "image_size": 640,
+    "device": "cpu",
+    "input": "torch.randn(1, 3, size, size), one tensor reused by every arm",
+    "observer": "scripts.routing_capture.capture_records (e3-routing/v1, family=moe)",
+    "temperature_schedule_frozen_modules": 3,
+    "forced_snapshot_modules": 3
+  },
+  "anneal": {
+    "updated_modules": 3,
+    "temperature_before": {
+      "model.5.routing": 1.2,
+      "model.8.routing": 1.2,
+      "model.11.routing": 1.2
+    },
+    "temperature_after": {
+      "model.5.routing": 2.4,
+      "model.8.routing": 2.4,
+      "model.11.routing": 2.4
+    }
+  },
+  "layers": {
+    "model.11": {
+      "module_type": "DetailAwareLowRankHybridAdaptiveGateMoE",
+      "num_experts": 16,
+      "top_k": 2,
+      "baseline": {
+        "top1_share": 0.541292,
+        "entropy_nats": 0.689733,
+        "entropy_normalized": 0.248769,
+        "gini": 0.880162
+      },
+      "factor_2_0": {
+        "top1_share": 0.520669,
+        "entropy_nats": 0.692292,
+        "entropy_normalized": 0.249692,
+        "gini": 0.877584
+      },
+      "delta": {
+        "top1_share": -0.020623,
+        "entropy_nats": 0.002559,
+        "entropy_normalized": 0.000923,
+        "gini": -0.002578
+      },
+      "dominant_expert": {
+        "baseline": 0,
+        "factor_2_0": 0
+      },
+      "dominant_expert_changed": false,
+      "expert_usage": {
+        "baseline": [
+          0.541292,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.458708,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "factor_2_0": [
+          0.520669,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.479331,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "model.5": {
+      "module_type": "DetailAwareLowRankHybridAdaptiveGateMoE",
+      "num_experts": 4,
+      "top_k": 2,
+      "baseline": {
+        "top1_share": 1.0,
+        "entropy_nats": -0.0,
+        "entropy_normalized": -0.0,
+        "gini": 0.75
+      },
+      "factor_2_0": {
+        "top1_share": 1.0,
+        "entropy_nats": -0.0,
+        "entropy_normalized": -0.0,
+        "gini": 0.75
+      },
+      "delta": {
+        "top1_share": 0.0,
+        "entropy_nats": 0.0,
+        "entropy_normalized": 0.0,
+        "gini": 0.0
+      },
+      "dominant_expert": {
+        "baseline": 3,
+        "factor_2_0": 3
+      },
+      "dominant_expert_changed": false,
+      "expert_usage": {
+        "baseline": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "factor_2_0": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    "model.8": {
+      "module_type": "DetailAwareLowRankHybridAdaptiveGateMoE",
+      "num_experts": 8,
+      "top_k": 2,
+      "baseline": {
+        "top1_share": 0.536595,
+        "entropy_nats": 0.690466,
+        "entropy_normalized": 0.332044,
+        "gini": 0.759149
+      },
+      "factor_2_0": {
+        "top1_share": 0.518322,
+        "entropy_nats": 0.692476,
+        "entropy_normalized": 0.33301,
+        "gini": 0.75458
+      },
+      "delta": {
+        "top1_share": -0.018273,
+        "entropy_nats": 0.00201,
+        "entropy_normalized": 0.000966,
+        "gini": -0.004569
+      },
+      "dominant_expert": {
+        "baseline": 1,
+        "factor_2_0": 1
+      },
+      "dominant_expert_changed": false,
+      "expert_usage": {
+        "baseline": [
+          0.0,
+          0.536595,
+          0.463405,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "factor_2_0": [
+          0.0,
+          0.518322,
+          0.481678,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  },
+  "aggregate": {
+    "moe_layers": 3,
+    "changed_layers": {
+      "top1_share": 2,
+      "entropy_nats": 2,
+      "entropy_normalized": 2,
+      "gini": 2
+    },
+    "dominant_expert_changed_layers": 0,
+    "mean_delta": {
+      "top1_share": -0.012965,
+      "entropy_nats": 0.001523,
+      "entropy_normalized": 0.00063,
+      "gini": -0.002382
+    }
+  },
+  "determinism": {
+    "baseline_repeat_identical": true,
+    "factor_2_0_repeat_identical": true,
+    "arm_sha256": {
+      "baseline": "22b4d39b4d685b602a87cb1bfb95ee60f9c93e2b678b530748b972f94595e377",
+      "baseline_repeat": "22b4d39b4d685b602a87cb1bfb95ee60f9c93e2b678b530748b972f94595e377",
+      "factor_2_0": "4daf5e95c2c9f3f84a39c0897101af322393b7294579da555bc4923820dd43f3",
+      "factor_2_0_repeat": "4daf5e95c2c9f3f84a39c0897101af322393b7294579da555bc4923820dd43f3"
+    }
+  }
+}

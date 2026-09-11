@@ -19,6 +19,7 @@ Owner：刘欣燃（GitHub：`Aliferous-spec`）
 | 最终验收 | `docs/p0-acceptance.md`（P0-6，2026-09-05，逐项 PASS） |
 | 字段字典 | `docs/smoke-design-and-schema.md` |
 | 开销与降级 | `docs/overhead-and-risk-plan.md` |
+| MoE 温度探针（补充证据，untrained routing-only） | `docs/moe-temperature-probe.md` |
 
 ## 一键复现
 
