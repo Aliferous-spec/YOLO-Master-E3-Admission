@@ -7,7 +7,7 @@
 
 ## 1. P1 目标
 
-把 E3 路由证据的粒度从“每次 run 的模块级快照”（P0）扩展到“每个 sample（每个输入）的模块级快照”（P1），并配套可复现的逐样本采集测量与入库证据。P1 不改变 P0 四 step 的行为与产物，不冻结跨族统一 schema，不修改上游 YOLO-Master，不提交上游 PR。
+把 E3 路由证据的粒度从“每次 run 的模块级快照”（P0）扩展到“每个 sample（每个输入）的模块级快照”（P1），并配套可复现的逐样本采集测量与入库证据。P1 不改变 P0 四 step 的行为与产物，不冻结跨族统一 schema，不修改上游 YOLO-Master，不提交本链路的上游代码 PR。
 
 保守范围（不引入新数据/新任务）：MoT 4 类合成场景各 1 图、MoE coco8 val 4 张图（batch=1）、Latent 1 张 640×640 随机图。
 理由：只验证“逐样本采集 + 测量 + 证据”闭环在既有输入集合上成立；样本集扩展、真实 checkpoint、MOT 评估均不在 P1。
@@ -121,7 +121,7 @@ P1-B（测量/验收）：
 - 修改 `e3-routing/v1`、adapter `family_data` 白名单、`RoutingRecordWriter` 语义。
 - 修改 P0 acceptance / P0 evidence / 历史 overhead 数字；删除或改变 P0 四 step。
 - 实时面板、token 级原图热图、跨族“统一 schema”正式冻结。
-- 上游 YOLO-Master 代码修改、上游 PR。
+- 上游 YOLO-Master 代码修改、本链路的上游代码 PR。
 - 训练后 checkpoint 的坍塌复测、MoT 在 MOT 跟踪任务上的评估、训练减速 <10% 的正式结论。
 - 数据集/样本量扩展（coco8 之外）、分布式/多卡（DDP）、`moa` 等未支持 family。
 - 移除或替换 `_moe_force_snapshot` / `MOE_SNAPSHOT_INTERVAL` 机制（保留，仅按既有 known coupling 记录）。

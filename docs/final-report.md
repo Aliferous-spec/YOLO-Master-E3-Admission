@@ -1,7 +1,7 @@
 # [犀牛鸟-E3] YOLO-Master 路由非侵入观测链路：结项报告
 
 仓库：`Aliferous-spec/YOLO-Master-E3-Admission`
-报告生成：2026-09-10（UTC+8）
+报告生成：2026-09-11（UTC+8）
 证据环境：Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101 / Windows-10
 基线三元组：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（官方锁定 ref） / `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（editable checkout） / `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（baseline_root）
 注：editable checkout（`D:\Claude_Workspace\projects\YOLO-Master-review`）与 baseline_root（`D:\YOLO-Master`）是**两个不同 checkout，不可视为同一个 commit**；training slowdown 正式运行以 `PYTHONPATH=D:/YOLO-Master` 使用 baseline（见 §5.1）。
@@ -10,7 +10,7 @@
 
 ## 0. 一句话结论
 
-在**不修改 YOLO-Master 核心 `forward`、不提交上游 PR** 的前提下，建成一条覆盖
+在**不修改 YOLO-Master 核心 `forward`、不为本链路向上游提交代码 PR** 的前提下，建成一条覆盖
 MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing/v1` 的结构化记录，
 每条 run 附 SHA-256 清单可在全新 clone 上自校验；并**先预注册判据、后执行实验**，
 以「bootstrap 95% CI 上界 < 10%」判定采集开销，3/3 seed 通过（上界 3.33%–4.90%）。
@@ -34,13 +34,18 @@ MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing
 
 代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**124 个测试全部通过**。
 
+### 作者其他上游贡献
+
+独立于 E3 观测链路，作者的文档贡献 `Tencent/YOLO-Master#132`（Windows CPU inference setup guide）
+已被上游仓库合并，并据此关闭 Issue `#119`。
+
 ---
 
 ## 2. 方法
 
 ### 2.1 零侵入
 
-不修改上游任何 `forward`、不改训练器、不提交上游 PR。采集走两条既有通道：
+不修改上游任何 `forward`、不改训练器、不为本链路提交上游代码 PR。采集走两条既有通道：
 
 - MoT / Latent：读取模块**原生快照属性**（`last_routing_snapshot`）；
 - MoE：注册 forward hook + `ExpertUsageTracker`。
@@ -162,7 +167,7 @@ CI 跨 0，故不能据此声称观测链会加速训练。
 
 ### 5.2 其它明确不做
 
-跨族统一 schema 正式冻结、token 级原图热图、上游 PR、训练后 checkpoint 坍塌复测、
+跨族统一 schema 正式冻结、token 级原图热图、本链路的上游代码 PR、训练后 checkpoint 坍塌复测、
 MoT 在 MOT 任务上的评测、数据集扩展（coco8 之外）、分布式/多卡、未支持 family。
 
 ### 5.3 已知限制与历史遗留
@@ -218,3 +223,4 @@ python -m scripts.routing_panel_sink artifacts\smoke\<run_id>
   LICENSE / CI / env / limitations
 - 09-10：P1-B 判据预注册 + 冻结锚点 + 确认性实验（seed 3/4/5，PASS 3/3）；
   真实训练减速补充测量（seed 0/1/2，ABBA 块级配对，判据 PASS）
+- 09-11：作者的上游文档贡献 `Tencent/YOLO-Master#132`（Windows CPU inference setup guide）被上游仓库合并，Issue `#119` 关闭

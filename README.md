@@ -4,7 +4,7 @@ Owner：刘欣燃（GitHub：`Aliferous-spec`）
 
 状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」；P1 真实训练减速补充测量已执行（2026-09-10，非验收依据），见下「P1 真实训练减速测量」。
 
-本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`，没有提交上游 PR。
+本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`；E3 观测链路未向上游提交代码 PR。另有独立的 Windows CPU 推理文档贡献已通过 `Tencent/YOLO-Master#132` 合并（关闭 Issue `#119`）。
 
 ## 交付清单对照
 
