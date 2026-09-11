@@ -57,6 +57,14 @@ run_tests.cmd
 - `routing_records.jsonl`：15 行 v1 记录（行级 `schema_version == "e3-routing/v1"`），MoT 9 + MoE 3 + Latent 3，均为真实 forward 后自动发现并采集（见 p0-acceptance §2.4/§2.5）。
 - 开销（验收跑）：`21.75%`（同日首跑 `-9.44%`，hook 开关时间差波动）；P0 只验证带符号解析与有限值，不做 `<10%` 阈值判定（见 p0-acceptance §4）。
 
+### P0 静态图补全（MoE / Latent）
+
+MoT 静态图由上游脚本产出（见上「实测结果」）；MoE / Latent 两张图由 `scripts/render_family_figures.py` 读取本验收 run 的既有证据（`moe_usage_stats.json` / `routing_records.jsonl`）渲染——不改上游、不重采、不动 MoT 图。逐图来源 run、模块、专家与 SHA-256 见 `artifacts/figures/p0/figures.json`。
+
+![MoE 专家选择占比静态图](artifacts/figures/p0/moe_expert_selection_heatmap.png)
+
+![Latent 专家路由权重静态图](artifacts/figures/p0/latent_expert_routing_heatmap.png)
+
 ## P1-A 逐样本采集 Closure（2026-09-07）
 
 - Closure 记录：`docs/p1-a-closure.md`；正式 run_id：`smoke-20260907-002319-d05c10`；产物目录：`artifacts/smoke/smoke-20260907-002319-d05c10/`（14 个文件）。

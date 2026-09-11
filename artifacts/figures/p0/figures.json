@@ -1,0 +1,58 @@
+{
+  "figure_version": "1.0.0",
+  "generator": "scripts/render_family_figures.py",
+  "run_id": "smoke-20260905-204546-6c7389",
+  "run_dir": "artifacts/smoke/smoke-20260905-204546-6c7389",
+  "families": [
+    "moe",
+    "latent"
+  ],
+  "figures": [
+    {
+      "family": "moe",
+      "path": "artifacts/figures/p0/moe_expert_selection_heatmap.png",
+      "source": "artifacts/smoke/smoke-20260905-204546-6c7389/moe_usage_stats.json",
+      "source_sha256": "81a351709025c7df82aeb9d3462061765e266bdde4c61c8c6349141c0c7e42a9",
+      "source_size_bytes": 1575,
+      "layers": [
+        "model.5.routing",
+        "model.8.routing",
+        "model.11.routing"
+      ],
+      "experts": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ],
+      "metric": "selection_share"
+    },
+    {
+      "family": "latent",
+      "path": "artifacts/figures/p0/latent_expert_routing_heatmap.png",
+      "source": "artifacts/smoke/smoke-20260905-204546-6c7389/routing_records.jsonl",
+      "source_sha256": "a1c171d3887421d6ffce1e9fac1997b1097126842693ccb1cece9f68dcc92490",
+      "source_size_bytes": 22772,
+      "layers": [
+        "model.23",
+        "model.24",
+        "model.25"
+      ],
+      "experts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "metric": "expert_usage",
+      "dispatch_policy": "dense",
+      "top_k": 4,
+      "routing_axis": "expert",
+      "routing_entropy_normalized": 1.0,
+      "dominant_expert_share": 0.25
+    }
+  ]
+}
