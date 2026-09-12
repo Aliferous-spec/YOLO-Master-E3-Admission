@@ -35,7 +35,7 @@ MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing
 | 路由健康诊断（只读） | 完成 | `scripts/routing_health_check.py`；MoE 专家坍缩固化为可复现诊断，参考 Gini=(E−1)/E |
 | MoE 温度探针（补充证据，untrained routing-only） | 完成（诚实负结果） | `docs/moe-temperature-probe.md`；API 生效但效应有限，不继续 intervention、不声称性能 |
 
-代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**140 个测试全部通过**。
+代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**148 个测试全部通过**。
 
 ### 作者其他上游贡献
 
@@ -161,6 +161,21 @@ top1_share 变化约 2 个百分点、Gini 变化 < 0.005、3 个 layer 的 domi
 据此**不继续做完整 intervention**，且全程未训练、未评估精度，**不构成任何性能结论**
 （见 `docs/moe-temperature-probe.md`）。
 
+### 4.7 P2 token 路由热图（MoE 空间路由）
+
+`scripts/render_token_heatmap.py`：以零侵入 hook 抓 MoE 路由层（`model.5` / `model.8` /
+`model.11`，专家数 4 / 8 / 16）空间分支的 logits，逐 token 取主导专家编号，叠加到 COCO8
+val 原图（`coco8.yaml:val`，alpha 0.45，turbo 色标 + 专家编号 colorbar）。4 张深色主题图见
+`artifacts/figures/p2/`（`figure_version` 1.1.0；provenance 记录每张图的 `image_sha256`、
+输入张量形状与逐层专家数）。
+
+口径说明：图上色块是 `local_conv` 空间分支的 softmax；上游 `DualStreamGateRouter` 仅在
+train 模式发布 per-image `router_probs`，二者不是同一个量。该 caveat 已印在图内并写入
+provenance，不作过强解读。
+
+演示视频：`artifacts/demo/e3-routing-demo-h264.mp4`（1920×1080 / 24 fps / 100 s / H.264，
+分段覆盖标题、扫描、两张热图、健康诊断、温度探针与边界声明；无音轨，信息全部烧入画面）。
+
 ---
 
 ## 5. 没做的、以及为什么（负结果照报）
@@ -187,7 +202,7 @@ CI 跨 0，故不能据此声称观测链会加速训练。
 
 ### 5.2 其它明确不做
 
-跨族统一 schema 正式冻结、token 级原图热图、本链路的上游代码 PR、训练后 checkpoint 坍塌复测、
+跨族统一 schema 正式冻结、本链路的上游代码 PR、训练后 checkpoint 坍塌复测、
 MoT 在 MOT 任务上的评测、数据集扩展（coco8 之外）、分布式/多卡、未支持 family。
 
 ### 5.3 已知限制与历史遗留
@@ -209,7 +224,7 @@ MoT 在 MOT 任务上的评测、数据集扩展（coco8 之外）、分布式/�
 set PYTHONUTF8=1
 cd C:\tmp\e3-package                      :: 或你的包路径
 
-:: 1) 单测（140 项）
+:: 1) 单测（148 项）
 "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
 
 :: 2) 一次 smoke（需要显式给基线路径）
@@ -244,4 +259,4 @@ python -m scripts.routing_panel_sink artifacts\smoke\<run_id>
 - 09-10：P1-B 判据预注册 + 冻结锚点 + 确认性实验（seed 3/4/5，PASS 3/3）；
   真实训练减速补充测量（seed 0/1/2，ABBA 块级配对，判据 PASS）
 - 09-11：作者的上游文档贡献 `Tencent/YOLO-Master#132`（Windows CPU inference setup guide）被上游仓库合并，Issue `#119` 关闭
-- 09-12：P0 静态图补全（MoE / Latent）；路由健康诊断（只读）；MoE 温度探针（untrained routing-only，诚实负结果）
+- 09-12：P0 静态图补全（MoE / Latent）；路由健康诊断（只读）；MoE 温度探针（untrained routing-only，诚实负结果）；P2 token 路由热图（4 张，`artifacts/figures/p2/`）+ 演示视频（H.264）
