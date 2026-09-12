@@ -38,7 +38,7 @@ without building a model or training anything.
 
 Example (formal run on the deployed baseline):
     <baseline-python> scripts/measure_training_slowdown.py \
-        --baseline-root D:/YOLO-Master --run-id train-slowdown-<stamp>
+        --baseline-root C:/path/to/YOLO-Master --run-id train-slowdown-<stamp>
 """
 
 from __future__ import annotations

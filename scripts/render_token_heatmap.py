@@ -29,7 +29,7 @@ deliberately not rendered here.
 
 Example:
     python scripts/render_token_heatmap.py --config configs/e3_smoke.yaml \
-        --baseline-root D:/YOLO-Master
+        --baseline-root C:/path/to/YOLO-Master
 """
 
 from __future__ import annotations

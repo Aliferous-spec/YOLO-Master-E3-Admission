@@ -4,7 +4,7 @@
 报告生成：2026-09-11（UTC+8）
 证据环境：Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101 / Windows-10
 基线三元组：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（官方锁定 ref） / `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（editable checkout） / `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（baseline_root）
-注：editable checkout（`D:\Claude_Workspace\projects\YOLO-Master-review`）与 baseline_root（`D:\YOLO-Master`）是**两个不同 checkout，不可视为同一个 commit**；training slowdown 正式运行以 `PYTHONPATH=D:/YOLO-Master` 使用 baseline（见 §5.1）。
+注：editable checkout（另一个本地 checkout）与 baseline_root（baseline checkout，YOLO-Master 上游仓库）是**两个不同 checkout，不可视为同一个 commit**；training slowdown 正式运行以 `PYTHONPATH` 指向 baseline checkout（YOLO-Master 上游仓库）使用 baseline（见 §5.1）。
 
 ---
 
@@ -34,7 +34,7 @@ MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing
 | P0 静态图补全（MoE / Latent） | 完成 | `scripts/render_family_figures.py`；来源 run / 模块 / SHA-256 见 `artifacts/figures/p0/figures.json` |
 | 路由健康诊断（只读） | 完成 | `scripts/routing_health_check.py`；MoE 专家坍缩固化为可复现诊断，参考 Gini=(E−1)/E |
 | MoE 温度探针（补充证据，untrained routing-only） | 完成（诚实负结果） | `docs/moe-temperature-probe.md`；API 生效但效应有限，不继续 intervention、不声称性能 |
-| 路由平衡干预（正式实验，预注册判据 NOT PASS） | 完成（诚实 null 结果） | `artifacts/routing_intervention/routing-balance-20260913/`（6/6 run，`comparison.json`）；见 §4.8 |
+| 路由平衡干预（正式实验，预注册判据 NOT PASS） | 完成（诚实 null 结果） | `artifacts/routing_intervention/routing-balance-20260913/`（6/6 run，`comparison.json`）；见 §4.8 与 `docs/routing-balance-intervention.md` |
 
 代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**173 项测试收集，172 passed / 1 skipped**。
 
@@ -188,9 +188,9 @@ provenance，不作过强解读。
 （辅助损失不读该属性），不改任何上游代码；`on_train_start` / 每个 `on_train_epoch_start` / `on_train_end`
 各断言一次，84/84 全绿（baseline 恒 1.0、intervention 恒 4.0）。
 
-协议（protocol）：coco8 / `yolo-master-n.yaml` / imgsz 640 / batch 1 / device cpu / workers 0 /
+协议（protocol）：coco8（4 张训练图 + 4 张验证图）/ `yolo-master-n.yaml` / imgsz 640 / batch 1 / device cpu / workers 0 /
 12 epochs（2 warmup + 10 measured）× seeds 0/1/2 × 2 arms = 6 个 run；两臂共用同一条
-`scripts.routing_capture` 观测链并同开 `_moe_force_snapshot`；baseline_root = `D:\YOLO-Master`
+`scripts.routing_capture` 观测链并同开 `_moe_force_snapshot`；baseline_root = baseline checkout（YOLO-Master 上游仓库）
 @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（运行前后 `git status` 均空）；环境前提
 `POLARS_SKIP_CPU_CHECK=1`。逐 epoch 逐 layer 记录 Gini / 归一化熵 / top1_share / dominant expert /
 `_last_mixture_aux_loss` / epoch wall-clock。
@@ -213,7 +213,7 @@ seed 1/2 两臂三层全部饱和、配对 delta 恰为 0，全部 delta 只来�
 
 结论（conclusion）：**NOT PASS**；如实记录为 null result，不调参重跑、不改写为成功。
 
-限制（limitations）：仅覆盖上述单一 regime（coco8 4 张图 / CPU / batch 1 / 640 / 12 epochs），
+限制（limitations）：仅覆盖上述单一 regime（coco8 4 张训练图 + 4 张验证图 / CPU / batch 1 / 640 / 12 epochs），
 未测 mAP、收敛或真实规模训练；不能声称该干预在所有训练 regime 下无效，也不能声称 balance loss
 会造成普遍性能下降。详见 `artifacts/routing_intervention/routing-balance-20260913/routing_balance_result.md`。
 
@@ -227,7 +227,7 @@ seed 1/2 两臂三层全部饱和、配对 delta 恰为 0，全部 delta 只来�
 bootstrap CI）已实现，6 项单测通过，预注册判据见 `docs/p1-judging-criteria.md`。
 先纠正一个此前的事实错误：曾判断 coco8 在本机不可得，实测**是可得的**——
 `check_det_dataset('coco8.yaml')` 解析到
-`C:\Users\<user>\Documents\yolo-master-study\datasets\coco8`（8 张图，已确认）。
+`C:\path\to\datasets\coco8`（8 张图，已确认）。
 （不可达的只是 github.com 上的**新下载**通道，本地副本一直存在。
 这条同时确认了 P0/P1 的 MoE 侧确实走的是真实 coco8 val 图像，而非随机张量。）
 
@@ -263,10 +263,10 @@ MoT 在 MOT 任务上的评测、数据集扩展（coco8 之外）、分布式/�
 
 ```bat
 set PYTHONUTF8=1
-cd C:\tmp\e3-package                      :: 或你的包路径
+cd C:\path\to\YOLO-Master-E3-Admission    :: 或你的包路径
 
 :: 1) 单测（173 项：172 passed / 1 skipped）
-"C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
+"C:\path\to\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
 
 :: 2) 一次 smoke（需要显式给基线路径）
 ::    cmd 没有 env -u：setlocal + set "VAR=" 才是真正移除变量，
@@ -274,10 +274,10 @@ cd C:\tmp\e3-package                      :: 或你的包路径
 setlocal
 set "PYTHONPATH="
 set "PYTHONHOME="
-"C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m scripts.run_e3_smoke --baseline-root D:\YOLO-Master
+"C:\path\to\.venvs\yolo_master\Scripts\python.exe" -m scripts.run_e3_smoke --baseline-root C:\path\to\YOLO-Master
 
 :: 3) 多 seed 批量 + 自动校验（沿用上面 setlocal 的清空状态）
-"C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m scripts.run_smoke_seeds --baseline-root D:\YOLO-Master --seeds 0,1,2
+"C:\path\to\.venvs\yolo_master\Scripts\python.exe" -m scripts.run_smoke_seeds --baseline-root C:\path\to\YOLO-Master --seeds 0,1,2
 
 endlocal
 

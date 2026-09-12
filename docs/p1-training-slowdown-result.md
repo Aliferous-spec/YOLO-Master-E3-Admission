@@ -10,23 +10,23 @@
 
 | 项 | 值 |
 | --- | --- |
-| 模型 cfg | `D:\YOLO-Master\ultralytics\cfg\models\master\v0_9\det\yolo-master-n.yaml` |
-| 数据 | `D:\YOLO-Master\ultralytics\cfg\datasets\coco8.yaml`（coco8，4 train / 4 val 图） |
+| 模型 cfg | `ultralytics\cfg\models\master\v0_9\det\yolo-master-n.yaml`（相对 baseline checkout） |
+| 数据 | `ultralytics\cfg\datasets\coco8.yaml`（相对 baseline checkout；coco8，4 张训练图 + 4 张验证图） |
 | imgsz / batch / device / workers | 640 / 1 / cpu / 2 |
-| Python | `C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe`（3.11.9） |
-| `PYTHONPATH` | `D:\YOLO-Master`（`import ultralytics` 解析到 `D:\YOLO-Master\ultralytics\__init__.py`） |
+| Python | `C:\path\to\.venvs\yolo_master\Scripts\python.exe`（3.11.9） |
+| `PYTHONPATH` | baseline checkout（YOLO-Master 上游仓库）（`import ultralytics` 解析到该 checkout 的 `ultralytics\__init__.py`） |
 | torch / ultralytics | 2.13.0+cpu / 8.4.101 |
 | platform | Windows-10-10.0.26200-SP0 |
-| baseline_root | `D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745` |
+| baseline_root | baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745` |
 | official_base_ref | `3eb6cd914b651a06e2cd08ea87d12c28cab95502` |
 | run_id | `train-slowdown-20260911` |
 | 执行窗口 | 2026-09-10T23:30:45+08:00 → 2026-09-10T23:37:44+08:00 |
 
 > **baseline 与 editable 是两个不同 checkout，不可视为同一个 commit。** 本次正式运行以
-> `PYTHONPATH=D:\YOLO-Master` 覆盖 venv 里的 editable 安装，使 `import ultralytics` 解析到
-> **baseline** checkout（`D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`），
+> `PYTHONPATH` 指向 baseline checkout 覆盖 venv 里的 editable 安装，使 `import ultralytics` 解析到
+> **baseline** checkout（YOLO-Master 上游仓库 @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`），
 > 而不是 P0 / P1-A 期间使用的 editable review checkout
-> （`D:\Claude_Workspace\projects\YOLO-Master-review` @ `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`）。
+> （另一个本地 checkout @ `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`）。
 
 ON 臂 = 训练 batch 结束后跑一遍 e3 观测链（MoE `_moe_force_snapshot=True` →
 `routing_capture.capture_records` 发现与适配 → `RoutingRecordWriter` 追加 JSONL）；
@@ -155,23 +155,23 @@ bootstrap 口径（引自 `parameters.bootstrap`）：percentile bootstrap of th
 
 ## 9. 复现命令
 
-工作目录 `C:\tmp\e3-package`（脚本会因输出已存在而拒绝覆盖；重跑请加 `--overwrite`
+工作目录：本仓库根 `C:\path\to\YOLO-Master-E3-Admission`（脚本会因输出已存在而拒绝覆盖；重跑请加 `--overwrite`
 或换 `--run-id`）：
 
 ```powershell
-$env:PYTHONPATH = "D:\YOLO-Master"
+$env:PYTHONPATH = "C:\path\to\YOLO-Master"
 $env:PYTHONUTF8 = "1"
 # polars 官方开关，绕过本机 CPUID 误报（见 §7；不影响协议与测量）
 $env:POLARS_SKIP_CPU_CHECK = "1"
-& "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
-    --baseline-root D:/YOLO-Master `
+& "C:\path\to\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
+    --baseline-root C:\path\to\YOLO-Master `
     --run-id train-slowdown-20260911
 ```
 
 只做配置校验、不训练：
 
 ```powershell
-$env:PYTHONPATH = "D:\YOLO-Master"
-& "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
-    --baseline-root D:/YOLO-Master --dry-run
+$env:PYTHONPATH = "C:\path\to\YOLO-Master"
+& "C:\path\to\.venvs\yolo_master\Scripts\python.exe" scripts/measure_training_slowdown.py `
+    --baseline-root C:\path\to\YOLO-Master --dry-run
 ```

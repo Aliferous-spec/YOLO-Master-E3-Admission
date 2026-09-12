@@ -1,7 +1,7 @@
 # E3 P1 Spec（最小可执行版）
 
 - 状态：**P1-A 已实现并通过 closure（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 仍未实现、尚未开始。
-- 依据：`C:\tmp\e3-package` @ HEAD `47c0c44`（P0 已 closure）。P0 acceptance、P0 evidence、`RoutingRecord e3-routing/v1`、历史 overhead 数字全部冻结，本 spec 不触碰。
+- 依据：本仓库 @ HEAD `47c0c44`（P0 已 closure）。P0 acceptance、P0 evidence、`RoutingRecord e3-routing/v1`、历史 overhead 数字全部冻结，本 spec 不触碰。
 - 本文件为 P1（A/B）定义基线；P1-A 实施与验收见 `docs/p1-a-closure.md`，P1-B 仍为 spec-only。
 - 规则：凡本 spec 未定义或与冻结对象冲突的需求，一律停下请示，不得在实现中擅自扩展。
 

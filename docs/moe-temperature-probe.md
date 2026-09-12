@@ -16,9 +16,9 @@
 ## 2. 复现方式
 
 ```bat
-set PYTHONPATH=D:\YOLO-Master
+set PYTHONPATH=C:\path\to\YOLO-Master
 python -m scripts.probe_moe_temperature ^
-  --baseline-root D:\YOLO-Master ^
+  --baseline-root C:\path\to\YOLO-Master ^
   --out artifacts/temperature/moe-temp-factor2-20260912/moe_temperature_probe.json
 ```
 
@@ -132,7 +132,7 @@ API 同时置 `_external_temperature_schedule=True`；这正是让 `AdaptiveGate
 - schema：`e3-temperature-probe/v1`（仅本探针使用，不修改 `e3-routing/v1` 或任何既有协议）
 - 环境（artifact `environment` 自采）：Windows-10-10.0.26200-SP0 / Python 3.11.9 /
   torch 2.13.0+cpu / ultralytics 8.4.101；`captured_at` 2026-09-12T01:42:07+08:00
-- 基线：`D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；checkpoint
+- 基线：baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；checkpoint
   `random_init_from_yaml`，`weights_sha256`
   `0809638cd04866194aa4e5ab0ac631b93a9ce894d2b5c8d72bac0fa8be4911ac`（四臂共用同一权重集）
 - 本次只新增该一个结果文件，未修改任何既有 evidence。

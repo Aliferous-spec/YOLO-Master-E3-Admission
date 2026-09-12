@@ -1,8 +1,8 @@
 # E3 P0 最终验收记录（P0-6 Acceptance）
 
 验收时间：2026-09-05 20:45–20:47（UTC+8，Asia/Shanghai）
-验收对象：`C:\tmp\e3-package`（`Aliferous-spec/YOLO-Master-E3-Admission`，工作树包含 P0-1..P0-5 的未提交改动）
-验收命令基线：`C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe`（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101）
+验收对象：本仓库（`Aliferous-spec/YOLO-Master-E3-Admission`，工作树包含 P0-1..P0-5 的未提交改动）
+验收命令基线：`C:\path\to\.venvs\yolo_master\Scripts\python.exe`（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101）
 
 > 结论先读：以下全部验收项均为 **PASS**，无 FAIL / BLOCKED。所有结论均来自本机实际执行与产物复核，无猜测项。
 
@@ -24,23 +24,23 @@
 ## 2. P0-6 验收检查清单（严格标记）
 
 ### 2.1 全部 pytest — **PASS**
-命令（在 `C:\tmp\e3-package`）：
+命令（在仓库根 `C:\path\to\YOLO-Master-E3-Admission`）：
 ```
-C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe -m pytest tests -q
+C:\path\to\.venvs\yolo_master\Scripts\python.exe -m pytest tests -q
 ```
 结果：`56 passed in 1.55s`，exit 0。覆盖文件：`test_routing_capture.py`、`test_run_e3_smoke.py`、`test_routing_record.py`、`test_routing_record_writer.py`、`test_moe_adapter.py`、`test_mot_adapter.py`、`test_latent_adapter.py`、`test_smoke_contract.py`。
 
 ### 2.2 一次最小三族真实 smoke — **PASS**
 命令（自动生成 run_id，验证 P0-3 默认路径）：
 ```
-C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master
+C:\path\to\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root C:\path\to\YOLO-Master
 ```
 结果：exit 0，日志与终端均以 `result=PASS` 结束。run_id：`smoke-20260905-204546-6c7389`。产物目录：`artifacts\smoke\smoke-20260905-204546-6c7389\`。
 
 ### 2.3 manifest verify — **PASS**
 命令：
 ```
-C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --verify-artifacts artifacts\smoke\smoke-20260905-204546-6c7389
+C:\path\to\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --verify-artifacts artifacts\smoke\smoke-20260905-204546-6c7389
 ```
 结果：exit 0，`result=PASS manifest OK`。独立复核（另行计算 SHA-256）：manifest 12 项，全部存在且哈希一致，无缺失、无篡改。
 
@@ -81,5 +81,5 @@ C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --
 ## 4. 环境与边界说明（如实记录，不构成 FAIL/BLOCKED）
 
 - overhead 实测值：首跑 `-9.44%`、验收跑 `21.75%`（hook 开关时间差波动）。P0-4 只要求解析带符号值并拒绝 NaN/Inf，P0 验收清单未包含 `<10%` 阈值判定，故不据此判 FAIL。
-- 运行时 `ultralytics` 包解析自 venv 的 editable 安装 `D:\Claude_Workspace\projects\YOLO-Master-review`（HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`，工作树含未提交改动）；smoke 的 `baseline_root`（chdir 目标、harness 脚本与 model config 来源）为 `D:\YOLO-Master`（HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`）；两者是**两个不同 checkout，不可视为同一个 commit**。`configs/e3_smoke.yaml` 内 `official_base_ref: 3eb6cd9...` 为配置记录值，与上述两个 HEAD 不一致，属环境实况，仅记录备查。
+- 运行时 `ultralytics` 包解析自 venv 的 editable 安装（另一个本地 checkout）（HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`，工作树含未提交改动）；smoke 的 `baseline_root`（chdir 目标、harness 脚本与 model config 来源）为 baseline checkout（YOLO-Master 上游仓库）（HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`）；两者是**两个不同 checkout，不可视为同一个 commit**。`configs/e3_smoke.yaml` 内 `official_base_ref: 3eb6cd9...` 为配置记录值，与上述两个 HEAD 不一致，属环境实况，仅记录备查。
 - 验收结论不涉及：统一 schema 正式冻结、训练减速正式结论、上游 PR。

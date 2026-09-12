@@ -55,6 +55,26 @@
 **判定：通过**（上界 6.12% < 10%）。注意：平均值为负是测量噪声，
 不代表"开了观测反而更快"——区间跨越 0，所以**不宣称"零减速"**。
 
+**路由平衡干预（独立实验，正式结论：NOT PASS）**
+
+接在上面两条之后，另跑一个独立实验：只把 MoE 平衡损失的权重
+（`moe_loss_fn.balance_loss_coeff`）从 baseline 1.0 调到 intervention 4.0，
+看路由负载会不会变匀。条件：coco8（**4 张训练图 + 4 张验证图**）、640 / batch 1 /
+CPU / workers 0、12 epochs（2 warmup + 10 measured）、3 seeds × 2 arms。
+指标是 Gini / 归一化熵 / top1 share，按 seed 配对做 bootstrap 95% 置信区间。
+
+| 统计量 | 值 |
+| --- | --- |
+| mean layer-Gini | 0.835790 → 0.836412 |
+| mean delta | +0.000622 |
+| 95% 置信区间 | [+0.000000, +0.001865] |
+| 归一化熵 | 0.061679 → 0.058923 |
+
+**判定：NOT PASS**（预注册判据未满足）。主要原因之一是天花板效应：
+180 行测量里有 143 行已经顶在 Gini 上限（seed 1/2 两臂三层全饱和），
+这个 regime 下几乎没有可动空间。这是**独立实验**，与上面的训练 slowdown
+补充测量分开记；详细口径见 `docs/routing-balance-intervention.md`。
+
 **P0 闭环**：seed 0/1/2/3/4/5 六次运行全部通过，manifest 校验全过。
 
 ## 4. 诚实说明：没做什么
