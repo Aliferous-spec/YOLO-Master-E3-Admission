@@ -120,7 +120,7 @@ P1-B（测量/验收）：
 
 - 修改 `e3-routing/v1`、adapter `family_data` 白名单、`RoutingRecordWriter` 语义。
 - 修改 P0 acceptance / P0 evidence / 历史 overhead 数字；删除或改变 P0 四 step。
-- 实时面板、token 级原图热图、跨族“统一 schema”正式冻结。
+- 实时面板、跨族“统一 schema”正式冻结。（token 级原图热图原列此条，属 P2 范畴，已于 09-12 另行完成，见 `docs/final-report.md` §4.7；P1 自身范围未变。）
 - 上游 YOLO-Master 代码修改、本链路的上游代码 PR。
 - 训练后 checkpoint 的坍塌复测、MoT 在 MOT 跟踪任务上的评估、训练减速 <10% 的正式结论。
 - 数据集/样本量扩展（coco8 之外）、分布式/多卡（DDP）、`moa` 等未支持 family。

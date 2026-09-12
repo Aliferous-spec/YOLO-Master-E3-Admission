@@ -25,7 +25,7 @@
 | 防篡改 | 每个文件算 SHA-256 存进 `manifest.sha256.json`，一条命令可复核 |
 | 防自己骗自己 | **判据先写死再跑实验**，冻结在 git 里（含 blob 哈希），事后不能改口径 |
 | 指标正确性 | 14 条闭式解真值断言：`[1,0,0]` → 熵必为 0、Gini 必为 2/3 等 |
-| 自动化 | GitHub Actions 每次提交跑 124 个测试（Python 3.9 / Ubuntu） |
+| 自动化 | GitHub Actions 每次提交跑 148 个测试（Python 3.9 / Ubuntu） |
 
 ## 3. 关键结果
 
@@ -61,14 +61,16 @@
 
 - **训练 slowdown 是补充测量，不作为验收依据**——任务书把这条正式结论列在范围外，
   所以数字照报，但项目不靠它领功。
-- **P2（token 级热图 + 演示视频）没做**。
+- **P2（token 级热图 + 演示视频）原列此清单，已于 09-12 结题冲刺补做**：MoE 空间路由热图
+  叠加 COCO8 原图（`artifacts/figures/p2/`，`figure_version` 1.1.0）+ 100 秒演示视频
+  （`artifacts/demo/`）。P2 属超出初始 P1 范围的新增成果，此处如实记录其原为「没做」。
 - 三个 CI 下界都是正数，所以**不宣称"零开销"**。
 - 测量是固定 OFF→ON 单顺序，存在未标定的顺序效应（已在判定文档中写明）。
 
 ## 5. 怎么复现（ reviewer 三步）
 
 ```bash
-python -m pytest tests -q                    # 124 个测试
+python -m pytest tests -q                    # 148 个测试
 python -m scripts.run_smoke_seeds --baseline-root <YOLO-Master路径> --seeds 3
 python -m scripts.run_e3_smoke --verify-artifacts artifacts/smoke/<run_id>
 ```
