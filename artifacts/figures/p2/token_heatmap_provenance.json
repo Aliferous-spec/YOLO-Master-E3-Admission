@@ -1,0 +1,417 @@
+{
+  "figure_version": "1.0.0",
+  "generator": "scripts/render_token_heatmap.py",
+  "generated_at": "2026-09-12T16:52:39+08:00",
+  "model_config": "ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml",
+  "dataset": "coco8.yaml:val",
+  "device": "cpu",
+  "alpha": 0.45,
+  "cmap": "turbo",
+  "router_probs_note": "the upstream DualStreamGateRouter publishes router_probs only in train mode and per-image [B, E]; the per-token map is the softmax over its captured spatial branch (local_conv) logits",
+  "figures": [
+    {
+      "png": "token_heatmap_000000000042.jpg.png",
+      "image": "000000000042.jpg",
+      "image_sha256": "c87afb6dfe55db1cada52479ed939a231e030d64f5e3c3eaf7eb1544591f853a",
+      "input_tensor_shape": [
+        1,
+        3,
+        512,
+        672
+      ],
+      "layers": [
+        {
+          "layer": "model.5",
+          "num_experts": 4,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            4,
+            16,
+            21
+          ],
+          "published_router_probs_shape": [
+            1,
+            4
+          ],
+          "published_dominant_expert": 3,
+          "published_dominant_share": 0.2689913511276245,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            35,
+            142,
+            79,
+            80
+          ]
+        },
+        {
+          "layer": "model.8",
+          "num_experts": 8,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            8,
+            8,
+            10
+          ],
+          "published_router_probs_shape": [
+            1,
+            8
+          ],
+          "published_dominant_expert": 1,
+          "published_dominant_share": 0.15178532898426056,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            1,
+            30,
+            16,
+            7,
+            4,
+            0,
+            12,
+            10
+          ]
+        },
+        {
+          "layer": "model.11",
+          "num_experts": 16,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            16,
+            4,
+            5
+          ],
+          "published_router_probs_shape": [
+            1,
+            16
+          ],
+          "published_dominant_expert": 0,
+          "published_dominant_share": 0.08448582142591476,
+          "token_dominant_expert": 8,
+          "token_expert_histogram": [
+            2,
+            0,
+            0,
+            4,
+            0,
+            0,
+            5,
+            3,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "png": "token_heatmap_000000000061.jpg.png",
+      "image": "000000000061.jpg",
+      "image_sha256": "6460e4a7cc80e34815aba8910a23152a16a24a416fa598138bd9231cccd413e2",
+      "input_tensor_shape": [
+        1,
+        3,
+        512,
+        672
+      ],
+      "layers": [
+        {
+          "layer": "model.5",
+          "num_experts": 4,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            4,
+            16,
+            21
+          ],
+          "published_router_probs_shape": [
+            1,
+            4
+          ],
+          "published_dominant_expert": 3,
+          "published_dominant_share": 0.2642761170864105,
+          "token_dominant_expert": 2,
+          "token_expert_histogram": [
+            67,
+            84,
+            99,
+            86
+          ]
+        },
+        {
+          "layer": "model.8",
+          "num_experts": 8,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            8,
+            8,
+            10
+          ],
+          "published_router_probs_shape": [
+            1,
+            8
+          ],
+          "published_dominant_expert": 1,
+          "published_dominant_share": 0.15344759821891785,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            1,
+            32,
+            20,
+            9,
+            6,
+            0,
+            5,
+            7
+          ]
+        },
+        {
+          "layer": "model.11",
+          "num_experts": 16,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            16,
+            4,
+            5
+          ],
+          "published_router_probs_shape": [
+            1,
+            16
+          ],
+          "published_dominant_expert": 0,
+          "published_dominant_share": 0.08665470778942108,
+          "token_dominant_expert": 6,
+          "token_expert_histogram": [
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            10,
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "png": "token_heatmap_000000000049.jpg.png",
+      "image": "000000000049.jpg",
+      "image_sha256": "86b46022d382f67b0934147fe515e1c3c3f5c04db45045516214b5e3092148e3",
+      "input_tensor_shape": [
+        1,
+        3,
+        672,
+        512
+      ],
+      "layers": [
+        {
+          "layer": "model.5",
+          "num_experts": 4,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            4,
+            21,
+            16
+          ],
+          "published_router_probs_shape": [
+            1,
+            4
+          ],
+          "published_dominant_expert": 3,
+          "published_dominant_share": 0.2674823999404907,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            42,
+            120,
+            80,
+            94
+          ]
+        },
+        {
+          "layer": "model.8",
+          "num_experts": 8,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            8,
+            10,
+            8
+          ],
+          "published_router_probs_shape": [
+            1,
+            8
+          ],
+          "published_dominant_expert": 1,
+          "published_dominant_share": 0.15204869210720062,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            2,
+            29,
+            25,
+            3,
+            5,
+            0,
+            10,
+            6
+          ]
+        },
+        {
+          "layer": "model.11",
+          "num_experts": 16,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            16,
+            5,
+            4
+          ],
+          "published_router_probs_shape": [
+            1,
+            16
+          ],
+          "published_dominant_expert": 0,
+          "published_dominant_share": 0.08260732144117355,
+          "token_dominant_expert": 6,
+          "token_expert_histogram": [
+            1,
+            0,
+            0,
+            4,
+            0,
+            0,
+            6,
+            3,
+            4,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "png": "token_heatmap_000000000036.jpg.png",
+      "image": "000000000036.jpg",
+      "image_sha256": "4c28394898302bef227834d63498a0fc54e4295f11c590c8a8ebcba51347bc03",
+      "input_tensor_shape": [
+        1,
+        3,
+        672,
+        512
+      ],
+      "layers": [
+        {
+          "layer": "model.5",
+          "num_experts": 4,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            4,
+            21,
+            16
+          ],
+          "published_router_probs_shape": [
+            1,
+            4
+          ],
+          "published_dominant_expert": 3,
+          "published_dominant_share": 0.2690425217151642,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            53,
+            117,
+            62,
+            104
+          ]
+        },
+        {
+          "layer": "model.8",
+          "num_experts": 8,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            8,
+            10,
+            8
+          ],
+          "published_router_probs_shape": [
+            1,
+            8
+          ],
+          "published_dominant_expert": 1,
+          "published_dominant_share": 0.15059612691402435,
+          "token_dominant_expert": 1,
+          "token_expert_histogram": [
+            0,
+            43,
+            13,
+            4,
+            3,
+            0,
+            4,
+            13
+          ]
+        },
+        {
+          "layer": "model.11",
+          "num_experts": 16,
+          "token_source": "router_spatial_branch_softmax",
+          "token_probs_shape": [
+            1,
+            16,
+            5,
+            4
+          ],
+          "published_router_probs_shape": [
+            1,
+            16
+          ],
+          "published_dominant_expert": 0,
+          "published_dominant_share": 0.08319415152072906,
+          "token_dominant_expert": 3,
+          "token_expert_histogram": [
+            3,
+            0,
+            0,
+            7,
+            3,
+            0,
+            2,
+            0,
+            3,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ]
+}
