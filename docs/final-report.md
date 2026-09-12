@@ -171,7 +171,7 @@ top1_share 变化约 2 个百分点、Gini 变化 < 0.005、3 个 layer 的 domi
 bootstrap CI）已实现，6 项单测通过，预注册判据见 `docs/p1-judging-criteria.md`。
 先纠正一个此前的事实错误：曾判断 coco8 在本机不可得，实测**是可得的**——
 `check_det_dataset('coco8.yaml')` 解析到
-`C:\Users\刘小姐\Documents\yolo-master-study\datasets\coco8`（8 张图，已确认）。
+`C:\Users\<user>\Documents\yolo-master-study\datasets\coco8`（8 张图，已确认）。
 （不可达的只是 github.com 上的**新下载**通道，本地副本一直存在。
 这条同时确认了 P0/P1 的 MoE 侧确实走的是真实 coco8 val 图像，而非随机张量。）
 
@@ -210,16 +210,16 @@ set PYTHONUTF8=1
 cd C:\tmp\e3-package                      :: 或你的包路径
 
 :: 1) 单测（140 项）
-"C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
+"C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
 
 :: 2) 一次 smoke（需要显式给基线路径）
 env -u PYTHONPATH -u PYTHONHOME ^
-  "C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe" ^
+  "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" ^
   -m scripts.run_e3_smoke --baseline-root D:\YOLO-Master
 
 :: 3) 多 seed 批量 + 自动校验
 env -u PYTHONPATH -u PYTHONHOME ^
-  "C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe" ^
+  "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" ^
   -m scripts.run_smoke_seeds --baseline-root D:\YOLO-Master --seeds 0,1,2
 
 :: 4) 校验任一 run 的证据完整性
