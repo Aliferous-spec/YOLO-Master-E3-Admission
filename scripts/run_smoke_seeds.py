@@ -15,7 +15,6 @@ Usage (acceptance env):
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import subprocess
 import sys
@@ -65,12 +64,6 @@ def _run_one(seed: int, config_path: Path, baseline_root: Path, run_id: str) -> 
         temp_config.unlink(missing_ok=True)
 
     run_dir = PACKAGE_ROOT / "artifacts" / "smoke" / run_id
-    steps = {}
-    if (run_dir / "summary.json").is_file():
-        try:
-            steps = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            steps = {}
 
     verify = subprocess.run(
         [sys.executable, "-m", "scripts.run_e3_smoke", "--verify-artifacts", str(run_dir)],
