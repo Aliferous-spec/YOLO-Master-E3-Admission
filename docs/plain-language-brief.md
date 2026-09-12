@@ -25,7 +25,7 @@
 | 防篡改 | 每个文件算 SHA-256 存进 `manifest.sha256.json`，一条命令可复核 |
 | 防自己骗自己 | **判据先写死再跑实验**，冻结在 git 里（含 blob 哈希），事后不能改口径 |
 | 指标正确性 | 14 条闭式解真值断言：`[1,0,0]` → 熵必为 0、Gini 必为 2/3 等 |
-| 自动化 | GitHub Actions 每次提交跑 148 个测试（Python 3.9 / Ubuntu） |
+| 自动化 | GitHub Actions 每次提交跑 173 个测试（Python 3.9 与 3.12 / Ubuntu） |
 
 ## 3. 关键结果
 
@@ -70,7 +70,7 @@
 ## 5. 怎么复现（ reviewer 三步）
 
 ```bash
-python -m pytest tests -q                    # 148 个测试
+python -m pytest tests -q                    # 173 个测试（172 passed / 1 skipped）
 python -m scripts.run_smoke_seeds --baseline-root <YOLO-Master路径> --seeds 3
 python -m scripts.run_e3_smoke --verify-artifacts artifacts/smoke/<run_id>
 ```

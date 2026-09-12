@@ -34,8 +34,9 @@ MoT / MoE / Latent 三族的路由观测链路：产出冻结 schema `e3-routing
 | P0 静态图补全（MoE / Latent） | 完成 | `scripts/render_family_figures.py`；来源 run / 模块 / SHA-256 见 `artifacts/figures/p0/figures.json` |
 | 路由健康诊断（只读） | 完成 | `scripts/routing_health_check.py`；MoE 专家坍缩固化为可复现诊断，参考 Gini=(E−1)/E |
 | MoE 温度探针（补充证据，untrained routing-only） | 完成（诚实负结果） | `docs/moe-temperature-probe.md`；API 生效但效应有限，不继续 intervention、不声称性能 |
+| 路由平衡干预（正式实验，预注册判据 NOT PASS） | 完成（诚实 null 结果） | `artifacts/routing_intervention/routing-balance-20260913/`（6/6 run，`comparison.json`）；见 §4.8 |
 
-代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**148 个测试全部通过**。
+代码规模：`scripts/` 约 4000 行，`tests/` 约 2700 行，**173 项测试收集，172 passed / 1 skipped**。
 
 ### 作者其他上游贡献
 
@@ -176,6 +177,46 @@ provenance，不作过强解读。
 演示视频：`artifacts/demo/e3-routing-demo-h264.mp4`（1920×1080 / 24 fps / 100 s / H.264，
 分段覆盖标题、扫描、两张热图、健康诊断、温度探针与边界声明；无音轨，信息全部烧入画面）。
 
+### 4.8 路由平衡干预（正式实验，预注册判据 NOT PASS）
+
+动机（motivation）：§4.5 把「MoE 专家坍缩」固化成只读诊断后，自然的下一个问题是——
+**提高 MoE 平衡损失权重能不能降低路由失衡？** 这是与 §4.6 温度探针**不同的杠杆**
+（那里调温度 API，这里调 `moe_loss_fn.balance_loss_coeff`），并沿用同一条纪律：先冻结判据、后执行实验。
+
+干预（intervention）：只改三个目标 layer（`model.5` / `model.8` / `model.11`）的
+`moe_loss_fn.balance_loss_coeff`——baseline = 1.0，intervention = 4.0。不改 `module.balance_loss_coeff`
+（辅助损失不读该属性），不改任何上游代码；`on_train_start` / 每个 `on_train_epoch_start` / `on_train_end`
+各断言一次，84/84 全绿（baseline 恒 1.0、intervention 恒 4.0）。
+
+协议（protocol）：coco8 / `yolo-master-n.yaml` / imgsz 640 / batch 1 / device cpu / workers 0 /
+12 epochs（2 warmup + 10 measured）× seeds 0/1/2 × 2 arms = 6 个 run；两臂共用同一条
+`scripts.routing_capture` 观测链并同开 `_moe_force_snapshot`；baseline_root = `D:\YOLO-Master`
+@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（运行前后 `git status` 均空）；环境前提
+`POLARS_SKIP_CPU_CHECK=1`。逐 epoch 逐 layer 记录 Gini / 归一化熵 / top1_share / dominant expert /
+`_last_mixture_aux_loss` / epoch wall-clock。
+
+结果（result）：以 seed 为配对单位（paired bootstrap 95% CI，10000 resamples，固定 seed 0）：
+mean layer-Gini **0.835790 → 0.836412**，mean delta **+0.000622**，CI **[+0.000000, +0.001865]**；
+归一化熵 **0.061679 → 0.058923**，delta **−0.002756**，CI **[−0.008268, +0.000000]**；
+top1_share delta +0.004997。6 个 run 全无 NaN / non-finite，无 callback 覆盖。
+
+判定（statistical decision）：判据要求「Gini delta < 0 且 CI 上界 < 0」＋「熵 delta > 0 且 CI 下界 > 0」，
+实测两条都不满足（Gini delta > 0 且 CI 上界 +0.001865 > 0；熵 delta < 0）→ **NOT PASS，
+不支持在当前实验 regime 下 `balance_loss_coeff=4.0` 改善 routing balance。**
+
+上限饱和（ceiling saturation）：Gini 上限 `(E−1)/E`（E = 4 / 8 / 16 → 0.75 / 0.875 / 0.9375）。
+180 个 measured row 中 **143 行**已顶在对应 layer 的上限（归一化熵 0、top1_share 1.0，完全单专家坍缩）；
+seed 1/2 两臂三层全部饱和、配对 delta 恰为 0，全部 delta 只来自 seed 0（该 seed `model.11` 由
+0.886601 升到 0.892250，`model.8` 几乎不变）——即唯一有 headroom 的 seed 上，干预把 Gini 略推高。
+这是观测链如实报告一个已坍缩状态（三个量自洽），不是测量失败；但说明本 regime 下该指标几乎无可动空间，
+本实验对该杠杆的检验力很低。
+
+结论（conclusion）：**NOT PASS**；如实记录为 null result，不调参重跑、不改写为成功。
+
+限制（limitations）：仅覆盖上述单一 regime（coco8 4 张图 / CPU / batch 1 / 640 / 12 epochs），
+未测 mAP、收敛或真实规模训练；不能声称该干预在所有训练 regime 下无效，也不能声称 balance loss
+会造成普遍性能下降。详见 `artifacts/routing_intervention/routing-balance-20260913/routing_balance_result.md`。
+
 ---
 
 ## 5. 没做的、以及为什么（负结果照报）
@@ -224,18 +265,21 @@ MoT 在 MOT 任务上的评测、数据集扩展（coco8 之外）、分布式/�
 set PYTHONUTF8=1
 cd C:\tmp\e3-package                      :: 或你的包路径
 
-:: 1) 单测（148 项）
+:: 1) 单测（173 项：172 passed / 1 skipped）
 "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m pytest tests -q
 
 :: 2) 一次 smoke（需要显式给基线路径）
-env -u PYTHONPATH -u PYTHONHOME ^
-  "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" ^
-  -m scripts.run_e3_smoke --baseline-root D:\YOLO-Master
+::    cmd 没有 env -u：setlocal + set "VAR=" 才是真正移除变量，
+::    让接下来的子进程看不到它们。
+setlocal
+set "PYTHONPATH="
+set "PYTHONHOME="
+"C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m scripts.run_e3_smoke --baseline-root D:\YOLO-Master
 
-:: 3) 多 seed 批量 + 自动校验
-env -u PYTHONPATH -u PYTHONHOME ^
-  "C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" ^
-  -m scripts.run_smoke_seeds --baseline-root D:\YOLO-Master --seeds 0,1,2
+:: 3) 多 seed 批量 + 自动校验（沿用上面 setlocal 的清空状态）
+"C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe" -m scripts.run_smoke_seeds --baseline-root D:\YOLO-Master --seeds 0,1,2
+
+endlocal
 
 :: 4) 校验任一 run 的证据完整性
 python -m scripts.run_e3_smoke --verify-artifacts artifacts\smoke\<run_id>
@@ -245,7 +289,7 @@ python -m scripts.routing_panel_sink artifacts\smoke\<run_id>
 ```
 
 注意：子进程必须剥离 `PYTHONPATH` / `PYTHONHOME`（环境里的 safe-delete shim 会
-劫持 `os.remove` 打断 MoT 步骤）；`run_smoke_seeds.py` 已内建剥离。
+劫持 `os.remove` 打断 MoT 步骤）；`run_smoke_seeds.py` 已内建剥离。Windows cmd 下用 `set "PYTHONPATH="` / `set "PYTHONHOME="`（没有 `env -u`）。
 
 ---
 
@@ -260,3 +304,4 @@ python -m scripts.routing_panel_sink artifacts\smoke\<run_id>
   真实训练减速补充测量（seed 0/1/2，ABBA 块级配对，判据 PASS）
 - 09-11：作者的上游文档贡献 `Tencent/YOLO-Master#132`（Windows CPU inference setup guide）被上游仓库合并，Issue `#119` 关闭
 - 09-12：P0 静态图补全（MoE / Latent）；路由健康诊断（只读）；MoE 温度探针（untrained routing-only，诚实负结果）；P2 token 路由热图（4 张，`artifacts/figures/p2/`）+ 演示视频（H.264）
+- 09-13：路由平衡干预正式实验（baseline coeff=1.0 vs `moe_loss_fn.balance_loss_coeff`=4.0；seeds 0/1/2 × 12 epochs，6/6 run 完成），预注册判据 **NOT PASS**（诚实 null 结果，含 ceiling saturation 说明）；§1/§6 的测试基准数同步为 173 项（172 passed / 1 skipped）

@@ -90,6 +90,12 @@ MoT 静态图由上游脚本产出（见上「实测结果」）；MoE / Latent 
 - CI 跨 0，故不能据此声称观测链会加速训练。`docs/requirements.md` §2 与 `docs/p1-spec.md` §10 已把「训练减速 <10% 的正式结论」列入不做清单，本结果**不作为验收依据**，仅如实披露。
 - baseline_root：`D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；权重产物 `runs/seed*/weights/*.pt` 不纳入 Git（仅本地）。
 
+## 路由平衡干预正式实验（2026-09-13，预注册判据 NOT PASS）
+
+- 干预：只改 `moe_loss_fn.balance_loss_coeff`（baseline 1.0 → intervention 4.0）；协议 coco8 / imgsz 640 / batch 1 / CPU / 12 epochs（2 warmup + 10 measured）× seeds 0/1/2（环境前提 `POLARS_SKIP_CPU_CHECK=1`；baseline_root `D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`），6/6 run 完成、无 NaN、84/84 系数断言通过。
+- 结果（seed 配对，bootstrap 95% CI）：mean layer-Gini 0.835790 → 0.836412，delta +0.000622，CI [+0.000000, +0.001865]；归一化熵 0.061679 → 0.058923，delta −0.002756；判定 **NOT PASS**，不支持在当前 regime 下 4.0 改善 routing balance。
+- 180 个 measured row 中 143 行已顶在对应 layer 的 Gini 上限 `(E−1)/E`（seed 1/2 两臂三层全部饱和、配对 delta=0），可动空间很小；null 结果照报。证据：`artifacts/routing_intervention/routing-balance-20260913/`。
+
 ## 版本与边界
 
 - 官方锁定基线（`configs/e3_smoke.yaml` 的 `official_base_ref` 记录值）：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（2026-08-23，main 分支）。

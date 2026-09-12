@@ -1,0 +1,206 @@
+{
+  "schema_version": "e3-routing-balance-experiment/v1",
+  "generator": "scripts/aggregate_routing_balance_experiment.py",
+  "generated_at": "2026-09-13T01:31:19+08:00",
+  "runs_root": "C:\\tmp\\e3-package\\artifacts\\routing_intervention\\routing-balance-20260913",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "measured_epochs": 10,
+  "integrity": {
+    "runs_found": 6,
+    "expected_runs": 6,
+    "problems": []
+  },
+  "seed_summary": {
+    "baseline": {
+      "0": {
+        "gini": 0.7990375677744548,
+        "entropy_normalized": 0.1850374607183554,
+        "top1_share": 0.711618235839088,
+        "epochs": 10,
+        "metric_rows": 30,
+        "run_id": "routing-balance-20260913-seed0-baseline",
+        "wall_seconds": 28.7642,
+        "gini_by_layer": {
+          "model.11": 0.8866010665893554,
+          "model.5": 0.75,
+          "model.8": 0.7605116367340088
+        }
+      },
+      "1": {
+        "gini": 0.8541666666666666,
+        "entropy_normalized": 0.0,
+        "top1_share": 1.0,
+        "epochs": 10,
+        "metric_rows": 30,
+        "run_id": "routing-balance-20260913-seed1-baseline",
+        "wall_seconds": 29.0473,
+        "gini_by_layer": {
+          "model.11": 0.9375,
+          "model.5": 0.75,
+          "model.8": 0.875
+        }
+      },
+      "2": {
+        "gini": 0.8541666666666666,
+        "entropy_normalized": 0.0,
+        "top1_share": 1.0,
+        "epochs": 10,
+        "metric_rows": 30,
+        "run_id": "routing-balance-20260913-seed2-baseline",
+        "wall_seconds": 46.1871,
+        "gini_by_layer": {
+          "model.11": 0.9375,
+          "model.5": 0.75,
+          "model.8": 0.875
+        }
+      }
+    },
+    "intervention": {
+      "0": {
+        "gini": 0.8009023388226827,
+        "entropy_normalized": 0.17676911363426467,
+        "top1_share": 0.7266094088432072,
+        "epochs": 10,
+        "metric_rows": 30,
+        "run_id": "routing-balance-20260913-seed0-intervention",
+        "wall_seconds": 35.047,
+        "gini_by_layer": {
+          "model.11": 0.8922500967979431,
+          "model.5": 0.75,
+          "model.8": 0.760456919670105
+        }
+      },
+      "1": {
+        "gini": 0.8541666666666666,
+        "entropy_normalized": 0.0,
+        "top1_share": 1.0,
+        "epochs": 10,
+        "metric_rows": 30,
+        "run_id": "routing-balance-20260913-seed1-intervention",
+        "wall_seconds": 74.599,
+        "gini_by_layer": {
+          "model.11": 0.9375,
+          "model.5": 0.75,
+          "model.8": 0.875
+        }
+      },
+      "2": {
+        "gini": 0.8541666666666666,
+        "entropy_normalized": 0.0,
+        "top1_share": 1.0,
+        "epochs": 10,
+        "metric_rows": 30,
+        "run_id": "routing-balance-20260913-seed2-intervention",
+        "wall_seconds": 69.7676,
+        "gini_by_layer": {
+          "model.11": 0.9375,
+          "model.5": 0.75,
+          "model.8": 0.875
+        }
+      }
+    }
+  },
+  "comparison": {
+    "metrics": {
+      "gini": {
+        "mean": 0.000621590349409303,
+        "std": 0.0010766260666714039,
+        "median": 0.0,
+        "p95": 0.001864771048227909,
+        "min": 0.0,
+        "max": 0.001864771048227909,
+        "n": 3,
+        "ci95": [
+          0.0,
+          0.001864771048227909
+        ],
+        "per_seed": {
+          "0": 0.001864771048227909,
+          "1": 0.0,
+          "2": 0.0
+        }
+      },
+      "entropy_normalized": {
+        "mean": -0.0027561156946969054,
+        "std": 0.004773732414753032,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": -0.008268347084090716,
+        "max": 0.0,
+        "n": 3,
+        "ci95": [
+          -0.008268347084090716,
+          0.0
+        ],
+        "per_seed": {
+          "0": -0.008268347084090716,
+          "1": 0.0,
+          "2": 0.0
+        }
+      },
+      "top1_share": {
+        "mean": 0.004997057668039743,
+        "std": 0.008655157769396488,
+        "median": 0.0,
+        "p95": 0.01499117300411923,
+        "min": 0.0,
+        "max": 0.01499117300411923,
+        "n": 3,
+        "ci95": [
+          0.0,
+          0.01499117300411923
+        ],
+        "per_seed": {
+          "0": 0.01499117300411923,
+          "1": 0.0,
+          "2": 0.0
+        }
+      }
+    },
+    "gini_criterion_met": false,
+    "entropy_criterion_met": false,
+    "pass": false,
+    "criterion": "intervention mean layer-Gini < baseline AND paired bootstrap 95% CI upper < 0; normalized entropy consistent (mean delta > 0 AND CI lower > 0)"
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101",
+    "ultralytics_file": "D:\\YOLO-Master\\ultralytics\\__init__.py",
+    "polars_skip_cpu_check": "1",
+    "pythonpath": "D:\\YOLO-Master"
+  },
+  "baselines": {
+    "baseline": {
+      "baseline_root": "D:\\YOLO-Master",
+      "model_config": "D:\\YOLO-Master\\ultralytics\\cfg\\models\\master\\v0_9\\det\\yolo-master-n.yaml",
+      "data": "D:\\YOLO-Master\\ultralytics\\cfg\\datasets\\coco8.yaml",
+      "seed": 2,
+      "epochs": 12,
+      "warmup_epochs": 2,
+      "measured_epochs": 10,
+      "imgsz": 640,
+      "batch": 1,
+      "device": "cpu",
+      "workers": 0
+    },
+    "intervention": {
+      "baseline_root": "D:\\YOLO-Master",
+      "model_config": "D:\\YOLO-Master\\ultralytics\\cfg\\models\\master\\v0_9\\det\\yolo-master-n.yaml",
+      "data": "D:\\YOLO-Master\\ultralytics\\cfg\\datasets\\coco8.yaml",
+      "seed": 2,
+      "epochs": 12,
+      "warmup_epochs": 2,
+      "measured_epochs": 10,
+      "imgsz": 640,
+      "batch": 1,
+      "device": "cpu",
+      "workers": 0
+    }
+  }
+}

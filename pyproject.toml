@@ -1,0 +1,52 @@
+# E3 routing-admission package: evidence scripts, tests, and the demo renderers.
+#
+# Dependency floors are the oldest versions that still work with the Python 3.9
+# / 3.12 CI matrix; the caps are the major after the one verified in the working
+# baseline environment (Python 3.11.9: numpy 2.4.6, matplotlib 3.11.1,
+# pandas 3.0.5, seaborn 0.13.2, PyYAML 6.0.3, pillow 12.3.0), so nothing here
+# silently upgrades onto an untested major.
+#
+# Not declared here on purpose: torch and the YOLO-Master baseline
+# (`ultralytics @ git+https://github.com/Tencent/YOLO-Master.git@3eb6cd914b651a06e2cd08ea87d12c28cab95502`,
+# see configs/e3_smoke.yaml and .github/workflows/ci.yml). They are a deployed
+# environment, not a pip dependency of the evidence scripts, and they are the
+# only heavy download in the project -- CI installs them as an explicit step.
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "e3-routing-admission"
+version = "0.1.0"
+description = "Non-invasive MoT/MoE/Latent routing observation, diagnostics, and demo tooling"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+dependencies = [
+    "numpy>=1.26,<3",
+    "matplotlib>=3.8,<4",
+    "pandas>=2.0,<4",
+    "seaborn>=0.13,<0.14",
+    "PyYAML>=6.0,<7",
+    "pillow>=10,<13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.6",
+]
+
+[tool.setuptools]
+packages = ["scripts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

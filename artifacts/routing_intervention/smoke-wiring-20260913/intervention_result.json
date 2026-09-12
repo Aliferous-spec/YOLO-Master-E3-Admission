@@ -1,0 +1,111 @@
+{
+  "schema_version": "e3-routing-intervention/v1",
+  "generator": "scripts/run_routing_balance_intervention.py",
+  "run_id": "smoke-wiring-20260913",
+  "started_at": "2026-09-13T01:12:55+08:00",
+  "finished_at": "2026-09-13T01:13:05+08:00",
+  "scope": "wiring check only: confirms the balance coefficient is applied and held during real training. Not a routing-quality or performance result.",
+  "arm": "intervention",
+  "coefficient": 4.0,
+  "parameters": {
+    "baseline_root": "D:\\YOLO-Master",
+    "model_config": "D:\\YOLO-Master\\ultralytics\\cfg\\models\\master\\v0_9\\det\\yolo-master-n.yaml",
+    "data": "D:\\YOLO-Master\\ultralytics\\cfg\\datasets\\coco8.yaml",
+    "seed": 0,
+    "epochs": 1,
+    "imgsz": 640,
+    "batch": 1,
+    "device": "cpu",
+    "workers": 0
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101",
+    "ultralytics_file": "D:\\YOLO-Master\\ultralytics\\__init__.py"
+  },
+  "knob": {
+    "path": "moe_loss_fn.balance_loss_coeff",
+    "module_attr_left_untouched": "balance_loss_coeff",
+    "forced_snapshot_modules": 3
+  },
+  "target_modules": {
+    "model.5": "DetailAwareLowRankHybridAdaptiveGateMoE",
+    "model.8": "DetailAwareLowRankHybridAdaptiveGateMoE",
+    "model.11": "DetailAwareLowRankHybridAdaptiveGateMoE"
+  },
+  "baseline_coeffs": {
+    "model.5": 1.0,
+    "model.8": 1.0,
+    "model.11": 1.0
+  },
+  "tuned": [
+    {
+      "module": "model.5",
+      "module_type": "DetailAwareLowRankHybridAdaptiveGateMoE",
+      "knob": "moe_loss_fn.balance_loss_coeff",
+      "before": 1.0,
+      "after": 4.0,
+      "module_attr_untouched": 1.0
+    },
+    {
+      "module": "model.8",
+      "module_type": "DetailAwareLowRankHybridAdaptiveGateMoE",
+      "knob": "moe_loss_fn.balance_loss_coeff",
+      "before": 1.0,
+      "after": 4.0,
+      "module_attr_untouched": 1.0
+    },
+    {
+      "module": "model.11",
+      "module_type": "DetailAwareLowRankHybridAdaptiveGateMoE",
+      "knob": "moe_loss_fn.balance_loss_coeff",
+      "before": 1.0,
+      "after": 4.0,
+      "module_attr_untouched": 1.0
+    }
+  ],
+  "assertions": [
+    {
+      "when": "on_train_start",
+      "epoch": null,
+      "expected": 4.0,
+      "observed": {
+        "model.5": 4.0,
+        "model.8": 4.0,
+        "model.11": 4.0
+      },
+      "ok": true
+    },
+    {
+      "when": "on_train_epoch_start",
+      "epoch": 0,
+      "expected": 4.0,
+      "observed": {
+        "model.5": 4.0,
+        "model.8": 4.0,
+        "model.11": 4.0
+      },
+      "ok": true
+    },
+    {
+      "when": "on_train_end",
+      "epoch": null,
+      "expected": 4.0,
+      "observed": {
+        "model.5": 4.0,
+        "model.8": 4.0,
+        "model.11": 4.0
+      },
+      "ok": true
+    }
+  ],
+  "records_total": 3,
+  "records_per_epoch": {
+    "0": 3
+  },
+  "epoch_seconds": [
+    1.24
+  ]
+}

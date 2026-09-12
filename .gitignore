@@ -7,3 +7,8 @@ artifacts/smoke/*/tmp/
 # Model weights and transient run files are not evidence; the repo tracks no *.pt.
 artifacts/**/weights/
 artifacts/**/pid.txt
+
+# Local editable-install metadata and scratch build output (see pyproject.toml)
+*.egg-info/
+build/
+dist/
