@@ -1,10 +1,10 @@
 # E3 路由透视镜：三族准入 Smoke（MoT / MoE / Latent）
 
-Owner：刘欣燃（GitHub：`Aliferous-spec`）
+Owner：刘欣然（GitHub：`Aliferous-spec`）
 
-状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」。
+状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」；P1 真实训练减速补充测量已执行（2026-09-10，非验收依据），见下「P1 真实训练减速测量」。
 
-本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`，没有提交上游 PR。
+本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`；没有为本 E3 观测链路提交上游代码 PR。另有独立的 Windows CPU 推理文档贡献已通过 `Tencent/YOLO-Master#132` 合并（关闭 Issue `#119`）。
 
 ## 交付清单对照
 
@@ -19,6 +19,7 @@ Owner：刘欣燃（GitHub：`Aliferous-spec`）
 | 最终验收 | `docs/p0-acceptance.md`（P0-6，2026-09-05，逐项 PASS） |
 | 字段字典 | `docs/smoke-design-and-schema.md` |
 | 开销与降级 | `docs/overhead-and-risk-plan.md` |
+| MoE 温度探针（补充证据，untrained routing-only） | `docs/moe-temperature-probe.md` |
 
 ## 一键复现
 
@@ -52,10 +53,18 @@ run_tests.cmd
 
 - 验收记录：`docs/p0-acceptance.md`；验收 run_id：`smoke-20260905-204546-6c7389`；产物目录：`artifacts/smoke/smoke-20260905-204546-6c7389/`。
 - 产物完整性：13 个文件，`manifest.sha256.json` 覆盖 12 项（自排除自身），SHA-256 复核 12/12 一致。
-- 验收命令：`python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master`；exit 0，`full.log` 以 `result=PASS` 结束，四 step（mot/moe/latent/overhead）均 PASS。
+- 验收命令：`python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root C:\path\to\YOLO-Master`；exit 0，`full.log` 以 `result=PASS` 结束，四 step（mot/moe/latent/overhead）均 PASS。
 - 单元测试：`python -m pytest tests -q` → `56 passed`，exit 0。
 - `routing_records.jsonl`：15 行 v1 记录（行级 `schema_version == "e3-routing/v1"`），MoT 9 + MoE 3 + Latent 3，均为真实 forward 后自动发现并采集（见 p0-acceptance §2.4/§2.5）。
 - 开销（验收跑）：`21.75%`（同日首跑 `-9.44%`，hook 开关时间差波动）；P0 只验证带符号解析与有限值，不做 `<10%` 阈值判定（见 p0-acceptance §4）。
+
+### P0 静态图补全（MoE / Latent）
+
+MoT 静态图由上游脚本产出（见上「实测结果」）；MoE / Latent 两张图由 `scripts/render_family_figures.py` 读取本验收 run 的既有证据（`moe_usage_stats.json` / `routing_records.jsonl`）渲染——不改上游、不重采、不动 MoT 图。逐图来源 run、模块、专家与 SHA-256 见 `artifacts/figures/p0/figures.json`。
+
+![MoE 专家选择占比静态图](artifacts/figures/p0/moe_expert_selection_heatmap.png)
+
+![Latent 专家路由权重静态图](artifacts/figures/p0/latent_expert_routing_heatmap.png)
 
 ## P1-A 逐样本采集 Closure（2026-09-07）
 
@@ -74,13 +83,27 @@ run_tests.cmd
 - 验收 run_id：`smoke-20260909-003356-2960be`；产物目录 `artifacts/smoke/smoke-20260909-003356-2960be/`（15 文件，manifest 覆盖 14 项）。`--verify-artifacts` → `result=PASS`；canonical `routing_records.jsonl` 仍为 15 行、`sample_routing_records.jsonl` 仍为 51 行；pytest `90 passed`。
 - 本次实测统计事实（只报告测量，不做 `<10%` 或性能结论，数值含运行噪声，以 artifact 原始数据为准）：overhead% mean 3.11（95% CI [0.51, 6.68]）、median 1.99、P95 14.18、min -37.27 / max 148.66、n=120；paired difference ms mean 6.31（median 3.99、P95 44.75）。
 
+## P1 真实训练减速测量（补充测量，非验收依据）
+
+- 结果入口：`docs/p1-training-slowdown-result.md`；预注册判据 `docs/p1-judging-criteria.md`；artifact `artifacts/training_slowdown/train-slowdown-20260911/slowdown_result.json`。
+- 实测（seed 0/1/2，ABBA 块级配对 n=6）：配对 slowdown mean **−5.38%**，bootstrap 95% CI **[−15.93%, +6.12%]**；按预注册判据「CI 上界 < 10%」判定 **PASS**（上界 +6.12%）。
+- CI 跨 0，故不能据此声称观测链会加速训练。`docs/requirements.md` §2 与 `docs/p1-spec.md` §10 已把「训练减速 <10% 的正式结论」列入不做清单，本结果**不作为验收依据**，仅如实披露。
+- baseline_root：baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；权重产物 `runs/seed*/weights/*.pt` 不纳入 Git（仅本地）。
+
+## 路由平衡干预正式实验（2026-09-13，预注册判据 NOT PASS）
+
+- 干预：只改 `moe_loss_fn.balance_loss_coeff`（baseline 1.0 → intervention 4.0）；协议 coco8（4 张训练图 + 4 张验证图）/ imgsz 640 / batch 1 / CPU / workers 0 / 12 epochs（2 warmup + 10 measured）× seeds 0/1/2（环境前提 `POLARS_SKIP_CPU_CHECK=1`；baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`），6/6 run 完成、无 NaN、84/84 系数断言通过。
+- 结果（seed 配对，bootstrap 95% CI）：mean layer-Gini 0.835790 → 0.836412，delta +0.000622，CI [+0.000000, +0.001865]；归一化熵 0.061679 → 0.058923，delta −0.002756；判定 **NOT PASS**，不支持在当前 regime 下 4.0 改善 routing balance。
+- 180 个 measured row 中 143 行已顶在对应 layer 的 Gini 上限 `(E−1)/E`（seed 1/2 两臂三层全部饱和、配对 delta=0），可动空间很小；null 结果照报。证据：`artifacts/routing_intervention/routing-balance-20260913/`；口径与限制详见 `docs/routing-balance-intervention.md`。
+
 ## 版本与边界
 
 - 官方锁定基线（`configs/e3_smoke.yaml` 的 `official_base_ref` 记录值）：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（2026-08-23，main 分支）。
 - schema_version：当前实际为 `e3-routing/v1`（`routing_records.jsonl` 每条记录均为该值，验收见 `docs/p0-acceptance.md` §2.5）。8.25 admission 与 9.5 验收 run 的 `summary.json` / `config.resolved.yaml` 顶层遗留 `e3-routing-smoke/v0.1-candidate` 属历史证据，不重写；`configs/e3_smoke.yaml` 已同步为 `e3-routing/v1`。
 - 本次验收实际运行基线与锁定 ref **不一致**，如实记录、不伪装成同一基线：
-  - 运行时 `ultralytics` 包来自 venv editable install：`D:\Claude_Workspace\projects\YOLO-Master-review`，HEAD `d604c4b`（工作树含未提交改动）；
-  - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：`D:\YOLO-Master`，HEAD `aa5d2e2`；
+  - 运行时 `ultralytics` 包来自 venv editable install（另一个本地 checkout），HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（工作树含未提交改动）；
+  - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：baseline checkout（YOLO-Master 上游仓库），HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；
+  - **editable 环境 HEAD 与 baseline HEAD 是两个不同 checkout，不可视为同一个 commit**：`d604c4bca8ceba3240c730f1b6e2767b7a320f6c` ≠ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；training slowdown 正式运行改以 `PYTHONPATH` 指向 baseline checkout（YOLO-Master 上游仓库）解析（见 `docs/p1-training-slowdown-result.md` §1），与本节 smoke 的 editable 环境不同。
   - 原因：验收在已部署的本地 checkout 上执行，review 与部署目录相对官方锁定 ref 各有演进与本地改动；该差异按环境实况记录（同 `docs/p0-acceptance.md` §4），不代表三处代码等价。
-- 已覆盖 MoT / MoE / Latent 三族；实时面板、token 原图热图与正式统一 schema 冻结属于后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`；P1-B 已于 2026-09-09 验收，见上「P1-B 逐样本开销测量」）。
+- 已覆盖 MoT / MoE / Latent 三族；token 原图热图（MoE 空间路由，`artifacts/figures/p2/`）已于 09-12 补做；实时面板与正式统一 schema 冻结仍属后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`；P1-B 已于 2026-09-09 验收，见上「P1-B 逐样本开销测量」）。
 - 已知实现耦合：MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`，详见 `docs/smoke-design-and-schema.md` §7。

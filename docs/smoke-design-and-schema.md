@@ -4,7 +4,7 @@
 
 目标：在锁定版本相关代码上，对 MoT / MoE / Latent 三类路由各完成一次真实路由采集，使用 forward hook（或原生快照属性）获取结构化 routing 数据，并生成可审查的 CSV/JSONL/PNG 与完整证据包。
 
-非目标：不训练模型、不评估 mAP、不冻结统一 schema、不证明训练减速<10%、不提交上游 PR。
+非目标：不训练模型、不评估 mAP、不冻结统一 schema、不证明训练减速<10%、不提交本链路的上游代码 PR。
 
 ## 2. 采集流程
 
@@ -58,6 +58,9 @@ hook 采集不替换模型输出；所有快照先 detach 再落盘，避免日�
 ## 6. 证据图说明
 
 - `mot_expert_heatmap_top1_share.png`：4 场景 × 3 专家的 `top1_share` 热力图，逐格显示占比。
+- `artifacts/figures/p0/moe_expert_selection_heatmap.png`：MoE 选择占比热力图，行 = `model.5/8/11.routing`，列 = 专家 id，值 = 各层 `hits` 归一化占比（来源 `moe_usage_stats.json`）。
+- `artifacts/figures/p0/latent_expert_routing_heatmap.png`：Latent 路由权重热力图，行 = `model.23/24/25`（`LatentMixture`），列 = 专家 id，值 = `expert_usage`（来源 `routing_records.jsonl`；dispatch=dense、top_k=4）。
+- 上述两图由 `scripts/render_family_figures.py` 从 P0 验收 run `smoke-20260905-204546-6c7389` 的既有证据渲染，`artifacts/figures/p0/figures.json` 记录来源 run 与 SHA-256；MoT 图仍由上游脚本产出，本仓库不重绘。
 - 随机初始化模型在全部 4 类合成场景下 `LocalConvTransformer` 专家 `top1_share` 恒为 1.00（专家坍塌），这是训练前基线的真实特征，不是脚本 bug；后续需在真实训练 checkpoint 上复测。
 
 ## 7. 已知耦合（known coupling）

@@ -11,10 +11,11 @@ manifest 校验结果与跨 seed 指标对比，作为 P0 红线补齐的凭证�
 | 1 | `seed1-20260909-232807-2076` | PASS | PASS |
 | 2 | `seed2-20260909-232807-616f` | PASS | PASS |
 
-- 批量驱动：`python -m scripts.run_smoke_seeds --baseline-root D:/YOLO-Master --seeds 0,1,2`
+- 批量驱动：`python -m scripts.run_smoke_seeds --baseline-root C:\path\to\YOLO-Master --seeds 0,1,2`
 - 逐 run 复核：`python -m scripts.run_e3_smoke --verify-artifacts artifacts/smoke/<run_id>`
 - 环境：验收基线 venv（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101，
-  见各 run 的 `environment.json`）；基线 `D:\YOLO-Master` @ `aa5d2e2`。
+  见各 run 的 `environment.json`）；基线 baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`
+  （与运行期 venv editable 安装的 review checkout 是两个不同 checkout，不可视为同一个 commit）。
 
 ## 跨 Seed 指标对比（canonical `routing_records.jsonl`，15 模块/运行）
 

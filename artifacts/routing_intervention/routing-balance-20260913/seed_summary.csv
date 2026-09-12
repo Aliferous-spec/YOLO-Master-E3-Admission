@@ -1,0 +1,7 @@
+arm,seed,epochs,metric_rows,gini,entropy_normalized,top1_share,wall_seconds,run_id
+baseline,0,10,30,0.7990375677744548,0.1850374607183554,0.711618235839088,28.7642,routing-balance-20260913-seed0-baseline
+baseline,1,10,30,0.8541666666666666,0.0,1.0,29.0473,routing-balance-20260913-seed1-baseline
+baseline,2,10,30,0.8541666666666666,0.0,1.0,46.1871,routing-balance-20260913-seed2-baseline
+intervention,0,10,30,0.8009023388226827,0.17676911363426467,0.7266094088432072,35.047,routing-balance-20260913-seed0-intervention
+intervention,1,10,30,0.8541666666666666,0.0,1.0,74.599,routing-balance-20260913-seed1-intervention
+intervention,2,10,30,0.8541666666666666,0.0,1.0,69.7676,routing-balance-20260913-seed2-intervention

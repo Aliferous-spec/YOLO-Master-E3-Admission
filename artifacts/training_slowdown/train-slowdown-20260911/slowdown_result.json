@@ -1,0 +1,248 @@
+{
+  "schema_version": "e3-training-slowdown/v1",
+  "run_id": "train-slowdown-20260911",
+  "started_at": "2026-09-10T23:30:45+08:00",
+  "finished_at": "2026-09-10T23:37:44+08:00",
+  "protocol": {
+    "name": "e3-training-slowdown",
+    "criteria_ref": "docs/p1-judging-criteria.md",
+    "design": "real YOLO training; per seed one session; ABBA epoch blocks (OFF, ON, ON, OFF) of 6 epochs after 2 unmeasured warmup epochs",
+    "measured_object": "training wall-time slowdown of the e3 routing observation chain: ON arm runs the chain (MoE _moe_force_snapshot -> routing_capture.capture_records discovery/adapters -> RoutingRecordWriter JSONL append) once per training batch; OFF arm runs the identical training loop without it",
+    "arms": {
+      "off": "plain YOLO training batch loop",
+      "on": "same batch loop + one e3 observation-chain pass per batch end"
+    },
+    "pairing": {
+      "order": "OFF, ON, ON, OFF per seed; adjacent pairs (block1, block2) and (block4, block3)",
+      "rationale": "adjacent ON/OFF block pairing suppresses slow machine drift within a seed"
+    },
+    "block_unit": "seconds; per block = sum of per-epoch batch-loop wall time between the trainer on_train_epoch_start and on_train_epoch_end callbacks; per-epoch validation / EMA / checkpoint bookkeeping is excluded and identical in both arms",
+    "same_workload": "ON and OFF blocks train the same model init (per-seed torch.manual_seed), same data, same batch, same per-epoch step count; only the observation chain differs",
+    "device": "cpu",
+    "threshold": "95% CI upper bound < 10.0% (only pass criterion)"
+  },
+  "parameters": {
+    "model_config": "D:\\YOLO-Master\\ultralytics\\cfg\\models\\master\\v0_9\\det\\yolo-master-n.yaml",
+    "data": "D:\\YOLO-Master\\ultralytics\\cfg\\datasets\\coco8.yaml",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "abba_order": [
+      "OFF",
+      "ON",
+      "ON",
+      "OFF"
+    ],
+    "epochs_per_block": 6,
+    "warmup_epochs": 2,
+    "epochs_per_seed": 26,
+    "imgsz": 640,
+    "batch": 1,
+    "device": "cpu",
+    "workers": 2,
+    "bootstrap": {
+      "method": "percentile bootstrap of the mean (2.5%-97.5%)",
+      "resamples": 10000,
+      "seed": 0
+    }
+  },
+  "baselines": {
+    "official_base_ref": "3eb6cd914b651a06e2cd08ea87d12c28cab95502",
+    "runtime_ultralytics_editable_install_head": "aa5d2e20c109b96f4a0c68f667ed2694586ef745",
+    "baseline_root_head": "aa5d2e20c109b96f4a0c68f667ed2694586ef745"
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.9",
+    "torch": "2.13.0+cpu",
+    "ultralytics": "8.4.101"
+  },
+  "blocks": [
+    {
+      "seed": 0,
+      "block": 1,
+      "arm": "OFF",
+      "epochs": 6,
+      "seconds": 19.204273499999545,
+      "train_batches": 24,
+      "on_records": 0
+    },
+    {
+      "seed": 0,
+      "block": 2,
+      "arm": "ON",
+      "epochs": 6,
+      "seconds": 15.891000300000087,
+      "train_batches": 24,
+      "on_records": 72
+    },
+    {
+      "seed": 0,
+      "block": 3,
+      "arm": "ON",
+      "epochs": 6,
+      "seconds": 13.980904700000337,
+      "train_batches": 24,
+      "on_records": 72
+    },
+    {
+      "seed": 0,
+      "block": 4,
+      "arm": "OFF",
+      "epochs": 6,
+      "seconds": 18.469870099999753,
+      "train_batches": 24,
+      "on_records": 0
+    },
+    {
+      "seed": 1,
+      "block": 1,
+      "arm": "OFF",
+      "epochs": 6,
+      "seconds": 20.207730999999967,
+      "train_batches": 24,
+      "on_records": 0
+    },
+    {
+      "seed": 1,
+      "block": 2,
+      "arm": "ON",
+      "epochs": 6,
+      "seconds": 20.11592570000039,
+      "train_batches": 24,
+      "on_records": 72
+    },
+    {
+      "seed": 1,
+      "block": 3,
+      "arm": "ON",
+      "epochs": 6,
+      "seconds": 18.02957329999981,
+      "train_batches": 24,
+      "on_records": 72
+    },
+    {
+      "seed": 1,
+      "block": 4,
+      "arm": "OFF",
+      "epochs": 6,
+      "seconds": 19.82841249999956,
+      "train_batches": 24,
+      "on_records": 0
+    },
+    {
+      "seed": 2,
+      "block": 1,
+      "arm": "OFF",
+      "epochs": 6,
+      "seconds": 16.32323850000057,
+      "train_batches": 24,
+      "on_records": 0
+    },
+    {
+      "seed": 2,
+      "block": 2,
+      "arm": "ON",
+      "epochs": 6,
+      "seconds": 19.409286200000224,
+      "train_batches": 24,
+      "on_records": 72
+    },
+    {
+      "seed": 2,
+      "block": 3,
+      "arm": "ON",
+      "epochs": 6,
+      "seconds": 19.23365069999909,
+      "train_batches": 24,
+      "on_records": 72
+    },
+    {
+      "seed": 2,
+      "block": 4,
+      "arm": "OFF",
+      "epochs": 6,
+      "seconds": 19.25194289999945,
+      "train_batches": 24,
+      "on_records": 0
+    }
+  ],
+  "pairs": [
+    {
+      "seed": 0,
+      "pair": 1,
+      "off_block": 1,
+      "on_block": 2,
+      "off_seconds": 19.204273499999545,
+      "on_seconds": 15.891000300000087,
+      "slowdown_percent": -17.252791156091043
+    },
+    {
+      "seed": 0,
+      "pair": 2,
+      "off_block": 4,
+      "on_block": 3,
+      "off_seconds": 18.469870099999753,
+      "on_seconds": 13.980904700000337,
+      "slowdown_percent": -24.304260807981944
+    },
+    {
+      "seed": 1,
+      "pair": 1,
+      "off_block": 1,
+      "on_block": 2,
+      "off_seconds": 20.207730999999967,
+      "on_seconds": 20.11592570000039,
+      "slowdown_percent": -0.45430780922201575
+    },
+    {
+      "seed": 1,
+      "pair": 2,
+      "off_block": 4,
+      "on_block": 3,
+      "off_seconds": 19.82841249999956,
+      "on_seconds": 18.02957329999981,
+      "slowdown_percent": -9.072028333079048
+    },
+    {
+      "seed": 2,
+      "pair": 1,
+      "off_block": 1,
+      "on_block": 2,
+      "off_seconds": 16.32323850000057,
+      "on_seconds": 19.409286200000224,
+      "slowdown_percent": 18.90585437442175
+    },
+    {
+      "seed": 2,
+      "pair": 2,
+      "off_block": 4,
+      "on_block": 3,
+      "off_seconds": 19.25194289999945,
+      "on_seconds": 19.23365069999909,
+      "slowdown_percent": -0.09501482575226498
+    }
+  ],
+  "statistics": {
+    "slowdown_percent": {
+      "mean": -5.378758092950761,
+      "std": 15.196829376346004,
+      "median": -4.763168071150532,
+      "p95": 18.90585437442175,
+      "min": -24.304260807981944,
+      "max": 18.90585437442175,
+      "n": 6,
+      "ci95": [
+        -15.92733000226618,
+        6.118843913149156
+      ]
+    }
+  },
+  "verdict": {
+    "criterion": "95% CI upper bound < 10.0% (unique pre-registered pass criterion)",
+    "ci95_upper_percent": 6.118843913149156,
+    "pass": true
+  }
+}

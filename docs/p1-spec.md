@@ -1,13 +1,13 @@
 # E3 P1 Spec（最小可执行版）
 
 - 状态：**P1-A 已实现并通过 closure（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 仍未实现、尚未开始。
-- 依据：`C:\tmp\e3-package` @ HEAD `47c0c44`（P0 已 closure）。P0 acceptance、P0 evidence、`RoutingRecord e3-routing/v1`、历史 overhead 数字全部冻结，本 spec 不触碰。
+- 依据：本仓库 @ HEAD `47c0c44`（P0 已 closure）。P0 acceptance、P0 evidence、`RoutingRecord e3-routing/v1`、历史 overhead 数字全部冻结，本 spec 不触碰。
 - 本文件为 P1（A/B）定义基线；P1-A 实施与验收见 `docs/p1-a-closure.md`，P1-B 仍为 spec-only。
 - 规则：凡本 spec 未定义或与冻结对象冲突的需求，一律停下请示，不得在实现中擅自扩展。
 
 ## 1. P1 目标
 
-把 E3 路由证据的粒度从“每次 run 的模块级快照”（P0）扩展到“每个 sample（每个输入）的模块级快照”（P1），并配套可复现的逐样本采集测量与入库证据。P1 不改变 P0 四 step 的行为与产物，不冻结跨族统一 schema，不修改上游 YOLO-Master，不提交上游 PR。
+把 E3 路由证据的粒度从“每次 run 的模块级快照”（P0）扩展到“每个 sample（每个输入）的模块级快照”（P1），并配套可复现的逐样本采集测量与入库证据。P1 不改变 P0 四 step 的行为与产物，不冻结跨族统一 schema，不修改上游 YOLO-Master，不提交本链路的上游代码 PR。
 
 保守范围（不引入新数据/新任务）：MoT 4 类合成场景各 1 图、MoE coco8 val 4 张图（batch=1）、Latent 1 张 640×640 随机图。
 理由：只验证“逐样本采集 + 测量 + 证据”闭环在既有输入集合上成立；样本集扩展、真实 checkpoint、MOT 评估均不在 P1。
@@ -85,7 +85,7 @@
 
 - 臂：OFF=仅 model forward；ON=P1-A 逐样本采集路径（每样本 forward + snapshot 刷新/force + adapter 生成记录 + 内存缓存；MoE 侧含 BN 状态恢复）；JSONL 写盘单独计（可选拆 serialization 子臂）。
 - 参数（沿用 P0 脚本默认值，保守）：warmup=5，iterations=50/arm，size=640，device=cpu；独立 on/off 重复 ≥3 次。
-- 报告：每对 overhead% + mean ± std + min/max + n；artifact 记录协议参数、model config、环境、时间戳、baseline 三元组（`3eb6cd9` / `d604c4b` / `aa5d2e2`）。
+- 报告：每对 overhead% + mean ± std + min/max + n；artifact 记录协议参数、model config、环境、时间戳、baseline 三元组（`3eb6cd9` / `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（editable checkout） / `aa5d2e20c109b96f4a0c68f667ed2694586ef745`（baseline_root）；后两者为不同 checkout，不可视为同一个 commit）。
 - MoE 的 snapshot 刷新与 BN 状态恢复开销必须显式计入 ON 臂并说明。
 - 明确：不引用、不混入 P0 `overhead_result.json` 数值（P0 数字是历史证据，不是 P1 结果）。
 - 阈值结论：P1-B 只报告统计量；不做 `<10%` 判定，除非另行预注册阈值与置信区间方法。
@@ -120,8 +120,8 @@ P1-B（测量/验收）：
 
 - 修改 `e3-routing/v1`、adapter `family_data` 白名单、`RoutingRecordWriter` 语义。
 - 修改 P0 acceptance / P0 evidence / 历史 overhead 数字；删除或改变 P0 四 step。
-- 实时面板、token 级原图热图、跨族“统一 schema”正式冻结。
-- 上游 YOLO-Master 代码修改、上游 PR。
+- 实时面板、跨族“统一 schema”正式冻结。（token 级原图热图原列此条，属 P2 范畴，已于 09-12 另行完成，见 `docs/final-report.md` §4.7；P1 自身范围未变。）
+- 上游 YOLO-Master 代码修改、本链路的上游代码 PR。
 - 训练后 checkpoint 的坍塌复测、MoT 在 MOT 跟踪任务上的评估、训练减速 <10% 的正式结论。
 - 数据集/样本量扩展（coco8 之外）、分布式/多卡（DDP）、`moa` 等未支持 family。
 - 移除或替换 `_moe_force_snapshot` / `MOE_SNAPSHOT_INTERVAL` 机制（保留，仅按既有 known coupling 记录）。
