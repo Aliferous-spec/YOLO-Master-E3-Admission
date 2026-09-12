@@ -53,7 +53,7 @@ run_tests.cmd
 
 - 验收记录：`docs/p0-acceptance.md`；验收 run_id：`smoke-20260905-204546-6c7389`；产物目录：`artifacts/smoke/smoke-20260905-204546-6c7389/`。
 - 产物完整性：13 个文件，`manifest.sha256.json` 覆盖 12 项（自排除自身），SHA-256 复核 12/12 一致。
-- 验收命令：`python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master`；exit 0，`full.log` 以 `result=PASS` 结束，四 step（mot/moe/latent/overhead）均 PASS。
+- 验收命令：`python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root C:\path\to\YOLO-Master`；exit 0，`full.log` 以 `result=PASS` 结束，四 step（mot/moe/latent/overhead）均 PASS。
 - 单元测试：`python -m pytest tests -q` → `56 passed`，exit 0。
 - `routing_records.jsonl`：15 行 v1 记录（行级 `schema_version == "e3-routing/v1"`），MoT 9 + MoE 3 + Latent 3，均为真实 forward 后自动发现并采集（见 p0-acceptance §2.4/§2.5）。
 - 开销（验收跑）：`21.75%`（同日首跑 `-9.44%`，hook 开关时间差波动）；P0 只验证带符号解析与有限值，不做 `<10%` 阈值判定（见 p0-acceptance §4）。
@@ -88,22 +88,22 @@ MoT 静态图由上游脚本产出（见上「实测结果」）；MoE / Latent 
 - 结果入口：`docs/p1-training-slowdown-result.md`；预注册判据 `docs/p1-judging-criteria.md`；artifact `artifacts/training_slowdown/train-slowdown-20260911/slowdown_result.json`。
 - 实测（seed 0/1/2，ABBA 块级配对 n=6）：配对 slowdown mean **−5.38%**，bootstrap 95% CI **[−15.93%, +6.12%]**；按预注册判据「CI 上界 < 10%」判定 **PASS**（上界 +6.12%）。
 - CI 跨 0，故不能据此声称观测链会加速训练。`docs/requirements.md` §2 与 `docs/p1-spec.md` §10 已把「训练减速 <10% 的正式结论」列入不做清单，本结果**不作为验收依据**，仅如实披露。
-- baseline_root：`D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；权重产物 `runs/seed*/weights/*.pt` 不纳入 Git（仅本地）。
+- baseline_root：baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；权重产物 `runs/seed*/weights/*.pt` 不纳入 Git（仅本地）。
 
 ## 路由平衡干预正式实验（2026-09-13，预注册判据 NOT PASS）
 
-- 干预：只改 `moe_loss_fn.balance_loss_coeff`（baseline 1.0 → intervention 4.0）；协议 coco8 / imgsz 640 / batch 1 / CPU / 12 epochs（2 warmup + 10 measured）× seeds 0/1/2（环境前提 `POLARS_SKIP_CPU_CHECK=1`；baseline_root `D:\YOLO-Master` @ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`），6/6 run 完成、无 NaN、84/84 系数断言通过。
+- 干预：只改 `moe_loss_fn.balance_loss_coeff`（baseline 1.0 → intervention 4.0）；协议 coco8（4 张训练图 + 4 张验证图）/ imgsz 640 / batch 1 / CPU / workers 0 / 12 epochs（2 warmup + 10 measured）× seeds 0/1/2（环境前提 `POLARS_SKIP_CPU_CHECK=1`；baseline checkout（YOLO-Master 上游仓库）@ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`），6/6 run 完成、无 NaN、84/84 系数断言通过。
 - 结果（seed 配对，bootstrap 95% CI）：mean layer-Gini 0.835790 → 0.836412，delta +0.000622，CI [+0.000000, +0.001865]；归一化熵 0.061679 → 0.058923，delta −0.002756；判定 **NOT PASS**，不支持在当前 regime 下 4.0 改善 routing balance。
-- 180 个 measured row 中 143 行已顶在对应 layer 的 Gini 上限 `(E−1)/E`（seed 1/2 两臂三层全部饱和、配对 delta=0），可动空间很小；null 结果照报。证据：`artifacts/routing_intervention/routing-balance-20260913/`。
+- 180 个 measured row 中 143 行已顶在对应 layer 的 Gini 上限 `(E−1)/E`（seed 1/2 两臂三层全部饱和、配对 delta=0），可动空间很小；null 结果照报。证据：`artifacts/routing_intervention/routing-balance-20260913/`；口径与限制详见 `docs/routing-balance-intervention.md`。
 
 ## 版本与边界
 
 - 官方锁定基线（`configs/e3_smoke.yaml` 的 `official_base_ref` 记录值）：`3eb6cd914b651a06e2cd08ea87d12c28cab95502`（2026-08-23，main 分支）。
 - schema_version：当前实际为 `e3-routing/v1`（`routing_records.jsonl` 每条记录均为该值，验收见 `docs/p0-acceptance.md` §2.5）。8.25 admission 与 9.5 验收 run 的 `summary.json` / `config.resolved.yaml` 顶层遗留 `e3-routing-smoke/v0.1-candidate` 属历史证据，不重写；`configs/e3_smoke.yaml` 已同步为 `e3-routing/v1`。
 - 本次验收实际运行基线与锁定 ref **不一致**，如实记录、不伪装成同一基线：
-  - 运行时 `ultralytics` 包来自 venv editable install：`D:\Claude_Workspace\projects\YOLO-Master-review`，HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（工作树含未提交改动）；
-  - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：`D:\YOLO-Master`，HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；
-  - **editable 环境 HEAD 与 baseline HEAD 是两个不同 checkout，不可视为同一个 commit**：`d604c4bca8ceba3240c730f1b6e2767b7a320f6c` ≠ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；training slowdown 正式运行改以 `PYTHONPATH=D:/YOLO-Master` 解析到 baseline checkout（见 `docs/p1-training-slowdown-result.md` §1），与本节 smoke 的 editable 环境不同。
+  - 运行时 `ultralytics` 包来自 venv editable install（另一个本地 checkout），HEAD `d604c4bca8ceba3240c730f1b6e2767b7a320f6c`（工作树含未提交改动）；
+  - smoke `baseline_root`（chdir 目标 / harness 脚本 / model config 来源）：baseline checkout（YOLO-Master 上游仓库），HEAD `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；
+  - **editable 环境 HEAD 与 baseline HEAD 是两个不同 checkout，不可视为同一个 commit**：`d604c4bca8ceba3240c730f1b6e2767b7a320f6c` ≠ `aa5d2e20c109b96f4a0c68f667ed2694586ef745`；training slowdown 正式运行改以 `PYTHONPATH` 指向 baseline checkout（YOLO-Master 上游仓库）解析（见 `docs/p1-training-slowdown-result.md` §1），与本节 smoke 的 editable 环境不同。
   - 原因：验收在已部署的本地 checkout 上执行，review 与部署目录相对官方锁定 ref 各有演进与本地改动；该差异按环境实况记录（同 `docs/p0-acceptance.md` §4），不代表三处代码等价。
 - 已覆盖 MoT / MoE / Latent 三族；token 原图热图（MoE 空间路由，`artifacts/figures/p2/`）已于 09-12 补做；实时面板与正式统一 schema 冻结仍属后续阶段（P1-A 已于 2026-09-07 closure，见 `docs/p1-a-closure.md`；P1-B 已于 2026-09-09 验收，见上「P1-B 逐样本开销测量」）。
 - 已知实现耦合：MoE 采集依赖上游模块私有属性 `_moe_force_snapshot`，详见 `docs/smoke-design-and-schema.md` §7。

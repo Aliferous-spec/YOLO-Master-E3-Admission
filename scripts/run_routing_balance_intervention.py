@@ -32,7 +32,7 @@ Environment prerequisite: the deployed venv needs ``POLARS_SKIP_CPU_CHECK=1``
 misleading non-finite-state error.
 
 Example (one session):
-    set PYTHONPATH=D:\YOLO-Master
+    set PYTHONPATH=C:/path/to/YOLO-Master
     set POLARS_SKIP_CPU_CHECK=1
     python -m scripts.run_routing_balance_intervention --arm intervention ^
         --seed 0 --epochs 12 --warmup-epochs 2 --run-id <id> --out-dir <dir>

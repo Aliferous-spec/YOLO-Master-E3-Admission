@@ -212,7 +212,7 @@ def run_probe(
     if not resolved.lower().startswith(root.lower()):
         raise RuntimeError(
             f"import gate failed: ultralytics resolved to {resolved}, expected a checkout under {root}. "
-            "Put the baseline checkout ahead of any editable install (e.g. PYTHONPATH=D:/YOLO-Master)."
+            "Put the baseline checkout ahead of any editable install (e.g. PYTHONPATH=C:/path/to/YOLO-Master)."
         )
 
     config_path = Path(baseline_root) / model_config

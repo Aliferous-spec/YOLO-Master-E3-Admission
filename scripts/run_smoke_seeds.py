@@ -8,8 +8,8 @@ with ``--verify-artifacts`` and prints one summary table.
 Exit code 0 only when every seed's smoke AND manifest verification pass.
 
 Usage (acceptance env):
-    python -m scripts.run_smoke_seeds --baseline-root D:/YOLO-Master
-    python -m scripts.run_smoke_seeds --baseline-root D:/YOLO-Master --seeds 0,1,2
+    python -m scripts.run_smoke_seeds --baseline-root C:/path/to/YOLO-Master
+    python -m scripts.run_smoke_seeds --baseline-root C:/path/to/YOLO-Master --seeds 0,1,2
 """
 
 from __future__ import annotations
