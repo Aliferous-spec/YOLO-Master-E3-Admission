@@ -2,7 +2,7 @@
 
 验收时间：2026-09-05 20:45–20:47（UTC+8，Asia/Shanghai）
 验收对象：`C:\tmp\e3-package`（`Aliferous-spec/YOLO-Master-E3-Admission`，工作树包含 P0-1..P0-5 的未提交改动）
-验收命令基线：`C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe`（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101）
+验收命令基线：`C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe`（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101）
 
 > 结论先读：以下全部验收项均为 **PASS**，无 FAIL / BLOCKED。所有结论均来自本机实际执行与产物复核，无猜测项。
 
@@ -26,21 +26,21 @@
 ### 2.1 全部 pytest — **PASS**
 命令（在 `C:\tmp\e3-package`）：
 ```
-C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe -m pytest tests -q
+C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe -m pytest tests -q
 ```
 结果：`56 passed in 1.55s`，exit 0。覆盖文件：`test_routing_capture.py`、`test_run_e3_smoke.py`、`test_routing_record.py`、`test_routing_record_writer.py`、`test_moe_adapter.py`、`test_mot_adapter.py`、`test_latent_adapter.py`、`test_smoke_contract.py`。
 
 ### 2.2 一次最小三族真实 smoke — **PASS**
 命令（自动生成 run_id，验证 P0-3 默认路径）：
 ```
-C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master
+C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master
 ```
 结果：exit 0，日志与终端均以 `result=PASS` 结束。run_id：`smoke-20260905-204546-6c7389`。产物目录：`artifacts\smoke\smoke-20260905-204546-6c7389\`。
 
 ### 2.3 manifest verify — **PASS**
 命令：
 ```
-C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --verify-artifacts artifacts\smoke\smoke-20260905-204546-6c7389
+C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --verify-artifacts artifacts\smoke\smoke-20260905-204546-6c7389
 ```
 结果：exit 0，`result=PASS manifest OK`。独立复核（另行计算 SHA-256）：manifest 12 项，全部存在且哈希一致，无缺失、无篡改。
 

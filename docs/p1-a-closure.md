@@ -2,7 +2,7 @@
 
 Closure 时间：2026-09-07 00:23–00:24（UTC+8，Asia/Shanghai）；文档定稿于 2026-09-07。
 Closure 对象：`C:\tmp\e3-package`（`Aliferous-spec/YOLO-Master-E3-Admission`，P1-A 实施为 HEAD `47c0c44`（P0 closure）之上的未提交改动，本次 commit 一并封存）。
-验收命令基线：`C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe`（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101）。
+验收命令基线：`C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe`（Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101）。
 
 > 结论先读：P1-A 全部验收项均为 **PASS**，无 FAIL / BLOCKED。P1-B（逐样本开销测量）**尚未开始**。所有结论均来自本机实际执行与产物复核，无猜测项。
 
@@ -15,7 +15,7 @@ Closure 对象：`C:\tmp\e3-package`（`Aliferous-spec/YOLO-Master-E3-Admission`
 - smoke 命令（在 `C:\tmp\e3-package`，exit 0，`result=PASS`）：
 
 ```
-C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master
+C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root D:\YOLO-Master
 ```
 
 - 运行区间：`full.log` 2026-09-07 00:23:19 → 00:23:49；`environment.json`：Windows 10 / Python 3.11.9 / torch 2.13.0+cpu / ultralytics 8.4.101；`official_base_ref: 3eb6cd914b651a06e2cd08ea87d12c28cab95502`。
@@ -58,7 +58,7 @@ C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py
 - `--verify-artifacts`（exit 0）：`result=PASS manifest OK`。命令：
 
 ```
-C:\Users\刘小姐\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --verify-artifacts artifacts\smoke\smoke-20260907-002319-d05c10
+C:\Users\<user>\.venvs\yolo_master\Scripts\python.exe scripts\run_e3_smoke.py --verify-artifacts artifacts\smoke\smoke-20260907-002319-d05c10
 ```
 
 - `summary.json`：`status=PASS`，`validation.errors=[]`；`full.log` 以 `result=PASS` 结束。
