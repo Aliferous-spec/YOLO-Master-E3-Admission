@@ -55,7 +55,7 @@ if str(PACKAGE_ROOT) not in sys.path:
 
 logger = logging.getLogger("e3-token-heatmap")
 
-FIGURE_VERSION = "1.0.0"
+FIGURE_VERSION = "1.1.0"
 GENERATOR = "scripts/render_token_heatmap.py"
 DEFAULT_ALPHA = 0.45
 DEFAULT_CMAP = "turbo"
@@ -161,28 +161,71 @@ def render_token_figure(
     out_path: Path,
     *,
     title: str,
+    cmap: str = DEFAULT_CMAP,
 ) -> None:
-    """Write one figure: input image plus one alpha-overlay panel per layer."""
+    """Write one figure: input image plus one alpha-overlay panel per layer.
+
+    Dark theme; color encodes the dominant-expert id (0..E-1), disclosed via a
+    colorbar so the reader never mistakes it for a routing-weight magnitude.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib import font_manager
+    from matplotlib.cm import ScalarMappable
+    from matplotlib.colors import Normalize
 
-    figure, axes = plt.subplots(1, 1 + len(panels), figsize=(4.2 * (1 + len(panels)), 4.6))
+    for _font in (
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\msyhbd.ttc",
+        r"C:\Windows\Fonts\simhei.ttf",
+    ):
+        try:
+            font_manager.fontManager.addfont(_font)
+        except Exception:
+            pass
+    plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    bg, fg, sub, mut, line = "#0d1117", "#f0f6fc", "#c9d1d9", "#8b949e", "#30363d"
+    ncols = 1 + len(panels)
+    figure, axes = plt.subplots(1, ncols, figsize=(4.2 * ncols, 4.9))
+    figure.patch.set_facecolor(bg)
     axes = np.atleast_1d(axes)
     axes[0].imshow(image)
-    axes[0].set_title("input image", fontsize=9)
+    axes[0].set_title("原图", fontsize=12, color=fg)
     for axis, panel in zip(axes[1:], panels):
         axis.imshow(panel["overlay"])
-        axis.set_title(str(panel["label"]), fontsize=9)
-        axis.set_xlabel(str(panel["note"]), fontsize=7)
+        axis.set_title(str(panel["label"]), fontsize=12, color=fg)
+        axis.set_xlabel(str(panel["note"]), fontsize=9, color=sub)
     for axis in axes:
         axis.set_xticks([])
         axis.set_yticks([])
-    figure.suptitle(title, fontsize=11)
-    figure.tight_layout()
+        axis.set_facecolor(bg)
+        for spine in axis.spines.values():
+            spine.set_color(line)
+
+    figure.suptitle(title, fontsize=13, color=fg, y=0.97)
+    figure.text(
+        0.02,
+        0.02,
+        "图为 local_conv 空间分支 softmax（上游每图 top-k 决策另见 provenance）",
+        fontsize=8,
+        color=mut,
+    )
+    figure.subplots_adjust(left=0.02, right=0.90, top=0.86, bottom=0.13, wspace=0.08)
+
+    sm = ScalarMappable(norm=Normalize(0, 1), cmap=cmap)
+    sm.set_array([])
+    cbar_ax = figure.add_axes([0.915, 0.13, 0.02, 0.68])
+    cbar = figure.colorbar(sm, cax=cbar_ax)
+    cbar.set_label("主导专家编号\n0 → E−1", fontsize=8, color=sub)
+    cbar.ax.tick_params(colors=mut, labelsize=8)
+    cbar.outline.set_edgecolor(line)
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    figure.savefig(out_path, dpi=200, bbox_inches="tight")
+    figure.savefig(out_path, dpi=200, bbox_inches="tight", facecolor=bg)
     plt.close(figure)
 
 
@@ -330,11 +373,11 @@ def render_token_heatmaps(
             panels.append(
                 {
                     "overlay": overlay_token_heatmap(image, layer["token_probs"], alpha=alpha, cmap=cmap),
-                    "label": f"{layer['layer']} | E={layer['num_experts']}",
+                    "label": f"{layer['layer']} ｜ E={layer['num_experts']}",
                     "note": (
-                        f"published per-image e{layer['published_dominant_expert']} "
-                        f"p={layer['published_dominant_share']:.2f} | "
-                        f"token top e{layer['token_dominant_expert']}"
+                        f"token 主导 e{layer['token_dominant_expert']} ｜ "
+                        f"每图决策 e{layer['published_dominant_expert']} "
+                        f"p={layer['published_dominant_share']:.2f}"
                     ),
                 }
             )
@@ -344,7 +387,8 @@ def render_token_heatmaps(
             image,
             panels,
             png,
-            title=f"MoE token routing heatmap - coco8 val {name}",
+            title="MoE 路由热图（颜色 = 主导专家编号）",
+            cmap=cmap,
         )
         figures.append(
             {

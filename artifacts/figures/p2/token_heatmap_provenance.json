@@ -1,7 +1,7 @@
 {
-  "figure_version": "1.0.0",
+  "figure_version": "1.1.0",
   "generator": "scripts/render_token_heatmap.py",
-  "generated_at": "2026-09-12T16:52:39+08:00",
+  "generated_at": "2026-09-12T21:06:21+08:00",
   "model_config": "ultralytics/cfg/models/master/v0_9/det/yolo-master-n.yaml",
   "dataset": "coco8.yaml:val",
   "device": "cpu",
