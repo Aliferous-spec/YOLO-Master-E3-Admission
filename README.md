@@ -4,7 +4,31 @@ Owner：刘欣然（GitHub：`Aliferous-spec`）
 
 状态：**P0-6 最终验收 PASS（2026-09-05）**，与 `docs/p0-acceptance.md` 一致（P0-1..P0-6 全部 PASS）；**P1-A 逐样本采集 closure PASS（2026-09-07）**，见 `docs/p1-a-closure.md`；P1-B 逐样本开销测量已实现并通过验收（2026-09-09），见下「P1-B 逐样本开销测量」；P1 真实训练减速补充测量已执行（2026-09-10，非验收依据），见下「P1 真实训练减速测量」。
 
-本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，以非侵入 forward hook / 原生快照属性对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。没有修改 YOLO-Master 核心 `forward`；没有为本 E3 观测链路提交上游代码 PR。另有独立的 Windows CPU 推理文档贡献已通过 `Tencent/YOLO-Master#132` 合并（关闭 Issue `#119`）。
+## 结论摘要
+
+**在不修改 YOLO-Master 核心 `forward`、不为本观测链路向上游提交代码 PR 的前提下**，建成一条覆盖 MoT / MoE / Latent 三族的路由观测链路。
+
+| 维度 | 结论 | 证据 |
+| --- | --- | --- |
+| 三族覆盖 | 每 run `routing_records.jsonl` 15 行（每族每模块 1 行），冻结 schema `e3-routing/v1` | 9.5 验收 run `smoke-20260905-204546-6c7389` |
+| 逐样本 | `sample_routing_records.jsonl` 51 行 / run，与 canonical 物理分文件、互不污染 | `docs/p1-a-closure.md` |
+| 可验证 | 每 run 附 `manifest.sha256.json`，`--verify-artifacts` 在全新 clone 上自校验通过 | 已修复 `.gitattributes` 换行转换导致的哈希失配（实测 3 处 mismatch） |
+| 开销 | **（本仓库的开销结论以此行为准）** 判据先冻结后执行，确认性实验用全新 seed 3/4/5，按「bootstrap 95% CI 上界 < 10%」判定 **PASS 3/3**（上界 4.199% / 3.325% / 4.896%） | `docs/p1-b-overhead-judging-criteria.freeze.json`（freeze `797d5fd7`）+ 判定记录 |
+| 指标可信 | 以闭式解锚定上游 `global_routing_metrics`，不靠"看起来对" | `tests/test_metric_analytic_groundtruth.py`（14 项断言） |
+| 负结果照报 | 路由平衡干预（`balance_loss_coeff` 1.0 → 4.0，seeds 0/1/2 × 12 epochs，6/6 run 完成）按预注册判据 **NOT PASS**，如实记为 null result | `docs/routing-balance-intervention.md`；180 个 measured row 中 143 行已顶在 Gini 上限 `(E−1)/E` |
+| 规模 | `scripts/` 约 4000 行、`tests/` 约 2700 行，173 项测试收集（172 passed / 1 skipped） | `run_tests.cmd` |
+
+**采集机制口径（本仓库的"非侵入"具体指什么）**：
+
+- **MoT / Latent**：读取模块自存的原生快照属性 `last_routing_snapshot`；
+- **MoE**：调用**上游自带**的 `ExpertUsageTracker`——forward hook 由该上游类在 `__init__` 中自行注册、由 `remove_hooks()`（上下文退出）自行移除，**非本仓库实现**；
+- **P2 逐 token 热图**：在本仓库侧对 router 及其空间分支临时注册**只读** hook，用后由 `RouterTokenProbe.close()` 全部 `remove()`（`scripts/render_token_heatmap.py`）。
+
+因此本仓库**无 monkey-patch、未修改上游任何 `forward`、未改变推理输出、未为本观测链路提交上游代码 PR**；其中所有 hook 均仅用于只读观测，来源见上。唯一已知耦合是 MoE 侧沿用上游私有属性 `_moe_force_snapshot`（`docs/smoke-design-and-schema.md` §7）。
+
+> 口径边界：以上数字均为 CPU / `yolo-master-n` @ 640 / 本机环境实测；`coco8`（8 张图）只证明采集链路可用，**不用于判断训练后路由质量或模型精度**。**开销的唯一结论性判据是「P1-B 逐样本开销测量」的预注册配对测量**；下文 P0 章节与 8.25 章节出现的单机 on/off 数值（含 `21.75%`）均为历史记录，**不作为开销结论**。完整方法、限制与已知历史遗留见 `docs/final-report.md`。
+
+本仓库是 E3 准入审核包：在已部署的 YOLO-Master 上，对 MoT、MoE、Latent 三类路由各采集一次 routing 快照，提供结构化日志、CSV/JSONL/PNG 证据、字段字典、开销测量结果与风险降级。采集**只读**，不改上游任何 `forward`：MoT / Latent 读取模块原生快照属性 `last_routing_snapshot`；MoE 调用**上游自带**的 `ExpertUsageTracker`（forward hook 由该类自行注册与移除）；P2 逐 token 热图在本仓库侧临时注册只读 hook 并在用后全部 `remove()`。全程无 monkey-patch、未修改上游任何 `forward`、未改变推理输出、未为本 E3 观测链路提交上游代码 PR。另有独立的 Windows CPU 推理文档贡献已通过 `Tencent/YOLO-Master#132` 合并（关闭 Issue `#119`）。
 
 ## 交付清单对照
 
@@ -44,7 +68,7 @@ run_tests.cmd
 - **MoT**：官方合成脚本，4 类场景（dense_small / large_regular / irregular_occluded / sparse_small）× 3 专家，输出 `mot_routing_detailed.csv` / `mot_routing_scenarios.csv` / `mot_deformable_activation_check.csv` / `mot_expert_heatmap_top1_share.png`。
 - **MoE**：`ExpertUsageTracker` 在 coco8 真实验证集（4 张图）上对 `model.5/8/11.routing` 三个 router 成功采集 hits / weighted_sum。
 - **Latent**：`model.23/24/25` 三个 LatentMixture 模块输出非空 `last_routing_snapshot`，字段数约 35-36。
-- **开销**：yolo-master-n @ 640×640，50 次前向，on/off 对照实测 1.50%~2.55%（运行间有波动，以 `overhead_result.json` 为准），满足 < 10% 目标。
+- **开销（8.25 准入期单机粗测，历史记录，非本仓库开销结论）**：yolo-master-n @ 640×640，50 次前向，on/off 对照实测 1.50%~2.55%（运行间有波动，以 `overhead_result.json` 为准）。**开销结论以「P1-B 逐样本开销测量」的预注册配对测量为准（PASS 3/3）。**
 - **已知基线现象**：随机初始化模型在全部 4 类合成场景下 `LocalConvTransformer` 专家 `top1_share` 恒为 1.00（专家坍塌），属训练前基线真实特征，不用于判断训练后质量。
 
 ![E3 准入 Smoke 静态图](artifacts/smoke/admission-20260825/mot_expert_heatmap_top1_share.png)
@@ -56,7 +80,7 @@ run_tests.cmd
 - 验收命令：`python.exe scripts\run_e3_smoke.py --config configs\e3_smoke.yaml --baseline-root C:\path\to\YOLO-Master`；exit 0，`full.log` 以 `result=PASS` 结束，四 step（mot/moe/latent/overhead）均 PASS。
 - 单元测试：`python -m pytest tests -q` → `56 passed`，exit 0。
 - `routing_records.jsonl`：15 行 v1 记录（行级 `schema_version == "e3-routing/v1"`），MoT 9 + MoE 3 + Latent 3，均为真实 forward 后自动发现并采集（见 p0-acceptance §2.4/§2.5）。
-- 开销（验收跑）：`21.75%`（同日首跑 `-9.44%`，hook 开关时间差波动）；P0 只验证带符号解析与有限值，不做 `<10%` 阈值判定（见 p0-acceptance §4）。
+- 开销（验收跑）：`21.75%`（同日首跑 `-9.44%`，负值来自 CPU 单机运行间噪声，非真实加速）。**⚠️ 该值是 P0 阶段的单机历史记录，不是本仓库的开销结论** —— P0 只验证带符号解析与有限值，不做 `<10%` 阈值判定（见 p0-acceptance §4）；**开销结论见下「P1-B 逐样本开销测量」（判据先冻结、全新 seed 3/4/5 配对测量，PASS 3/3）。**
 
 ### P0 静态图补全（MoE / Latent）
 
